@@ -82,3 +82,58 @@ nav button[aria-current] { color: #007635; background: #edf5e7; font-weight: 700
 .chat.user { background: #f4f4f4; margin-left: 24px; }
 .chat p { margin: 6px 0; }
 .coach fieldset { margin: 16px 0; border: 1px solid #cbd7c8; border-radius: 12px; min-width: 0; }
+/* Reference direction: white surfaces, mint background, green headings and simple rows. */
+:root { font-family: Arial, sans-serif; color: #202421; background: #eaf6ed; line-height: 1.5; }
+.app { background: #eaf6ed; max-width: 600px; }
+header { justify-content: center; position: relative; padding: 22px 60px; }
+.brand { border: 0; background: none; color: #202421; font-size: 20px; padding: 0; }
+.header-chat { position: absolute; right: 20px; background: none; border: 0; color: #176d4b; }
+.concept { text-align: center; background: white; font-size: 11px; color: #5d6861; padding: 0 12px 14px; }
+main { padding: 18px 20px 100px; }
+.customer label, .customer select { font-size: 12px; }
+.customer select { background: white; border-color: #c9dcd0; }
+h1 { font-size: 26px; line-height: 1.2; letter-spacing: -.6px; margin: 26px 0 20px; color: #176d4b; }
+h2 { color: #176d4b; font-size: 21px; letter-spacing: -.3px; }
+h3 { font-size: 16px; }
+p { color: #626862; line-height: 1.5; }
+section { border: 0; border-radius: 12px; padding: 20px; margin-bottom: 18px; }
+.spending-hero { text-align: center; padding: 28px 18px 12px; }
+.spending-hero p:first-child { color: #176d4b; font-weight: 600; margin: 0; }
+.spending-hero .amount { display: block; color: #007b48; font-size: 40px; margin: 8px 0; letter-spacing: -1px; }
+.spending-hero .text-button { border-top: 1px solid #dfe5df; width: 100%; margin-top: 12px; padding: 12px 0 0; }
+.text-button span { margin-left: 8px; font-size: 22px; }
+.section-label { margin: 26px 0 14px; font-size: 19px; }
+.journey-link { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  border: 0; border-radius: 12px; padding: 20px 18px; background: white; margin-bottom: 12px; color: #176d4b; }
+.journey-link svg { flex-shrink: 0; width: 30px; height: 30px; }
+.journey-link > span:nth-child(2) { flex: 1; min-width: 0; }
+.journey-link b { font-size: 17px; line-height: 1.3; display: block; }
+.journey-link small { color: #626862; font-size: 13px; margin-top: 4px; font-weight: 400; }
+.journey-link > span:last-child { font-size: 25px; color: #202421; }
+.tag { white-space: normal; text-align: center; }
+.metrics strong { font-size: 18px; color: #176d4b; overflow-wrap: anywhere; }
+.planning, .supporting { background: white; border-radius: 12px; margin: 16px 0; }
+.planning > summary, .supporting > summary { padding: 18px 20px; color: #176d4b; font-size: 16px; font-weight: 600; }
+.planning section, .supporting section { padding-top: 0; }
+.advanced { border-bottom: 1px solid #dfe5df; padding-bottom: 12px; }
+summary { min-height: 44px; }
+input, select { border-radius: 5px; color: #202421; font-size: 16px; }
+.primary { border-radius: 5px; background: #007b48; min-height: 50px; }
+.row { font-size: 14px; border-bottom: 1px solid #e4e7e4; padding: 12px 0; }
+.row span { overflow-wrap: anywhere; min-width: 0; }
+.row b { flex-shrink: 0; }
+.segmented { border-radius: 6px; background: #eef5f0; }
+.segmented button { border-radius: 4px; }
+.coach-label { color: #176d4b; font-size: 12px; font-weight: bold; }
+.coach .suggestions { display: grid; gap: 8px; }
+.coach button:not(.primary) { border: 1px solid #cbded1; background: white; color: #176d4b; border-radius: 6px; }
+.coach .suggestions button { text-align: left; padding: 12px; }
+.coach fieldset button { margin-top: 16px; }
+.chat { background: #eaf6ed; border-radius: 10px; }
+.chat.user { background: #f3f4f3; }
+nav { max-width: 600px; padding: 8px 10px max(8px, env(safe-area-inset-bottom)); background: white; backdrop-filter: none; }
+nav button { color: #777f79; border-radius: 0; font-size: 12px; }
+nav svg { display: block; margin: 0 auto 3px; }
+nav button[aria-current] { background: none; color: #008b48; }
+footer { color: #606b63; }
+@media (min-width: 600px) { main { padding-left: 32px; padding-right: 32px; } h1 { font-size: 30px; } }

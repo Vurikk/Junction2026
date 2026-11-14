@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 
 const suggestions = [
   'Spending by category', 'Spending vs historical average', 'Daily and weekly allowance', 'Goal progress', 'What if I add a goal?'];
-export default function Coach({ customer, api, money, onSaved }) {
+export default function Coach({ customer, api, money, onSaved, initialQuestion = '' }) {
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [question, setQuestion] = useState('');
+  const [question, setQuestion] = useState(initialQuestion);
   const [preview, setPreview] = useState(null);
   const [scenario, setScenario] = useState(false);
   async function ask(text, draft) {
@@ -29,12 +29,20 @@ export default function Coach({ customer, api, money, onSaved }) {
       });
       setPreview(null); setScenario(false); onSaved();
       setMessages(old => [...old, { text: 'Goal saved.' }]);
-      const analysis = await api(`customers/${customer}/goal-analysis`);
-      setMessages(old => [...old, { text: analysis.coach_message }]);
+      try {
+        const analysis = await api(`customers/${customer}/goal-analysis`);
+        setMessages(old => [...old, { text: analysis.coach_message }]);
+      } catch {
+        setMessages(old => [...old, { text: 'Your goal is saved. Its explanation is unavailable right now.' }]);
+      }
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   return <section className="coach"><h2>Let's talk about your money</h2>
-    <p>Choose a question or type one. Estimates use your confirmed Home plan.</p>
+    <p className="coach-label">Rule-based demo coach</p>
+    <p>Explore recorded categories, compare with your usual spending or check an allowance.</p>
+    <p className="fine">Uses English keywords and prepared explanations, not a live AI model.
+      What-if previews can add a goal; category reductions are not supported yet.
+      Estimates need a confirmed optional Home plan.</p>
     <div className="suggestions">{suggestions.map(text =>
       <button key={text} disabled={busy} onClick={() => ask(text)}>{text}</button>)}</div>
     <div role="log" aria-live="polite">{messages.map((item, i) =>
@@ -52,7 +60,7 @@ export default function Coach({ customer, api, money, onSaved }) {
     <form onSubmit={e => { e.preventDefault(); ask(question); setQuestion(''); }}>
       <label htmlFor="question">Your question</label>
       <input id="question" value={question} onChange={e => setQuestion(e.target.value)} required maxLength={500} disabled={busy} />
-      <button disabled={busy || !question.trim()}>Ask coach</button>
+      <button className="primary" disabled={busy || !question.trim()}>Ask coach</button>
     </form>
     {scenario && <form onChange={() => setPreview(null)} onSubmit={e => {
       e.preventDefault(); const fields = new FormData(e.currentTarget);
