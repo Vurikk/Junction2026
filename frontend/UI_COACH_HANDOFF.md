@@ -104,3 +104,17 @@ Screenshots: qa/weekly-eight-360.jpg, qa/home-current-goals-360.jpg, qa/home-cur
 Build, chart-period selection, Home render, Coach session checks and diff whitespace checks passed.
 This local backend does not contain f550b26; its runtime behavior is separately owned/tested by backend and QA.
 No provider call, backend edit, new dependency or merge was performed.
+
+## Final pairing smoke
+
+Tested UI767cdd6e6ceb31dd456c5b303c77795a9455d3af against backendf550b266d38c2a2f455650f34fba81d6e8406c38.
+Backend source was git-archived to a new temporary directory, not merged. Fresh process8027 explicitly set
+COACH_LLM_ENABLED=false with synthetic data and one worker; candidate Vite5188 targets only8027.
+Browser390px: July CUST04457 restaurants20% returned95.04/76.03/19.01, then typed follow-up10% returned
+95.04/85.54/9.50 with July dates and rule-based label. No unexpected goal form appeared.
+Weekly Spending chart had8 bars. Home Add goal saved one explicit EUR8 flexible goal and displayed it.
+Browser360px: switched to CUST00001, empty conversation and Home goals; context-free10% follow-up asked
+for clarification instead of reusing the first customer's July context. Screenshot: qa/paired-disabled-followup-390.jpg.
+No critical pairing blocker found. Paid-path concurrency recovery remains independently QA-tested, not
+recreated via provider calls here. All live tests in this workstream used paid-disabled mode.
+Final paired preview: http://127.0.0.1:5188 (5187 uses the older backend,5186 is mock-only).
