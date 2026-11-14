@@ -392,3 +392,32 @@ and all arithmetic uses Python. Mortgage application data are not an independent
 - These new UI behaviors and actual paired browser execution belong to the UI owner's independent workstream;
   QA has not claimed a browser pass for them here. Original customer datasets and physical keyboard also remain untested by QA.
 - No merge, provider call, paid activation, canonical-ledger access, or implementation/test/configuration edit by QA.
+
+## Follow-up: paired Safe to spend browser spot-check
+
+UI candidate `88e05cc4715c46b16d3e5153df33938a2574ea41`, backend `86d657f4bff79a7d281fe1539cf2d426a2bb9b86`.
+UI owner supplied its isolated paid-disabled pairing: frontend `http://127.0.0.1:5189` to backend `127.0.0.1:8028`.
+This port 5189 is the owner's new pairing, not the earlier QA memory-only server, which was stopped previously.
+No Coach/provider requests were submitted during this estimate walkthrough.
+
+Independent browser observations:
+
+1. Loaded CUST04457 Home: historical Balance existed, but Safe to spend remained Not available.
+   Visible copy said cash-only estimate, future income excluded, dated seven-day period,
+   and `No money set aside for goals in this estimate.`
+2. Complete the estimate showed the three blank fields. Historical bill references carried source dates
+   and explicitly said they are not a due-date schedule; the full amount actually due must be confirmed.
+3. Entered funds 1000 and total bills 700 with reserve blank; submitted. Allowance stayed Not available.
+4. Entered reserve 100 and submitted: daily EUR 28.57. Week toggle showed EUR 199.99.
+5. Changed to CUST00001: old estimate disappeared during loading; loaded result was Not available with no-earmark copy.
+6. Returned to CUST04457: estimate again Not available. No sample preview amount persisted across profile remount.
+   No goal or confirmed-plan save was performed; the tab was left with a blank estimate.
+
+Independently ran `check-safe-spend.cjs` and `check-home.cjs`: both passed.
+SafeToSpend source hash matched the named commit (`beeb2814a8fb26025df6db075178dac02c86bf8a`).
+Static checks cover unknown/zero distinction, manual-plan precedence and absence of invented usage progress.
+
+**Bounded paid-disabled demo GO for this exact pair**, combining the verified backend gates and this browser spot-check.
+Not an exhaustive UI certification: delayed-response races, physical keyboard, new mobile dimensions,
+historical-mode browser flow and live manual-plan precedence were not independently repeated in this follow-up.
+The UI owner's broader tests remain separately attributed. No new critical issue was observed in this bounded pass.
