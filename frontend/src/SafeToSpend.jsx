@@ -66,5 +66,6 @@ function missingReason(field) {
   if (field === 'three_complete_recorded_months') return 'Three complete months of recorded history are required.';
   if (field.startsWith('income_evidence:')) return `Income records missing for ${field.split(':')[1]}.`;
   if (field.startsWith('spending_evidence:')) return `Spending records missing for ${field.split(':')[1]}.`;
+  if (field.startsWith('unclassified_debit_evidence:')) return `Some outgoing payments need classification for ${field.split(':')[1]}.`;
   return 'Some required banking data is unavailable.';
 }

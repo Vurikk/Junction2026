@@ -191,3 +191,18 @@ automatic-estimate-fixture-390.jpg (clearly labeled mock). Tests made no provide
 At this checkpoint, real automatic endpoint pairing awaits the backend owner's committed build; current preview5189
 still uses backend86d657f. Mock values are fixtures only and are never used by the production component.
 Commit: the commit containing this section (git log -1 -- frontend/src/SafeToSpend.jsx).
+
+### Real backend pairing completed
+
+UI implementation33a0dec paired with archived backendc349d6555aa192aaede3db11b0ecbd60ef226b95,
+explicit COACH_LLM_ENABLED=false, single worker8029; final preview http://127.0.0.1:5190/.
+Using the unchanged goal form, created one temporary EUR100 Flexible goal per customer:
+CUST04457 displayed24.84/day and173.88/week, source2026-06-01–2026-08-31;
+CUST00001 displayed0.00/day, source2026-07-01–2026-09-30. Values matched Python HTTP responses.
+Verified customer isolation, no money inputs and no horizontal overflow, real screenshots at390 and360.
+The API has no goal DELETE route. Verified exact two QA goal IDs were the only goals and assumptions remained null,
+then restarted only this fresh isolated backend to clear them. Existing preview servers and user goals were untouched.
+Final preview shows Create a goal with no test goals. No provider calls or paid mode.
+Added readable unclassified-debit missing-data reason from final backend contract.
+Known unchanged copy: existing goal-save notice still points to optional manual planning; the automatic Home estimate
+works without those inputs. Goal UI was explicitly out of scope and left unchanged. No other UI regressions retested here.
