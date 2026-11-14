@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, ReferenceLine } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { chartPeriods } from './chartPeriods';
 
 const date = value => value ? value.slice(0, 10) : 'Date unavailable';
 
-export default function HomeSummary({ data, money, openCoach, onSpending, onPlan, onAddGoal }) {
+export default function HomeSummary({ data, money, openCoach, onSpending, onPlan, onAddGoal, onTarget }) {
   const [range, setRange] = useState('Today');
   const balances = data['recorded-balances'];
   const comparison = data['spending-comparison'];
@@ -79,17 +79,24 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
           <ResponsiveContainer width="100%" height={150}>
             <BarChart data={points} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
               <XAxis dataKey="start" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={45} />
+              <YAxis hide padding={{ top: 18, bottom: 8 }} />
               <Tooltip formatter={value => money(value)} />
               <Bar dataKey="spending_eur" name="Recorded spending" fill="#008c45" radius={[3, 3, 0, 0]} />
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
-                stroke="#94662e" strokeDasharray="4 4" ifOverflow="extendDomain" />}
+                stroke="#94662e" strokeDasharray="4 4" ifOverflow="extendDomain"
+                label={{ value: 'avg.', position: 'insideBottomLeft', fill: '#94662e', fontSize: 11,
+                  stroke: 'white', strokeWidth: 3, paintOrder: 'stroke' }} />}
               {history.budget_target_eur != null && <ReferenceLine y={Number(history.budget_target_eur)}
-                stroke="#3653a0" strokeDasharray="3 3" ifOverflow="extendDomain" />}
+                stroke="#3653a0" strokeWidth={2} strokeDasharray="3 3" ifOverflow="extendDomain"
+                label={{ value: 'goal', position: 'insideBottomLeft', fill: '#3653a0', fontSize: 11,
+                  stroke: 'white', strokeWidth: 3, paintOrder: 'stroke' }} />}
             </BarChart>
           </ResponsiveContainer>
         </div><p className="fine">Dashed: historical average {money(history.historical_average_eur)}
           {history.budget_target_eur != null && ` · Target ${money(history.budget_target_eur)}`}</p>
       </> : <p className="fine">Spending history unavailable.</p>}
+      {history && history.budget_target_eur == null && <button className="text-button" disabled={!data.assumptions}
+        onClick={onTarget}>Set spending target</button>}
       <button className="text-button" onClick={onSpending}>See where it went ›</button>
     </section>
   </>;

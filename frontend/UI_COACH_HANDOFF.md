@@ -118,3 +118,24 @@ for clarification instead of reusing the first customer's July context. Screensh
 No critical pairing blocker found. Paid-path concurrency recovery remains independently QA-tested, not
 recreated via provider calls here. All live tests in this workstream used paid-disabled mode.
 Final paired preview: http://127.0.0.1:5188 (5187 uses the older backend,5186 is mock-only).
+
+## Spending target labels and local greeting
+
+Root cause of missing goal line: weekly_budget_eur/monthly_budget_eur were null in the isolated API state;
+creating a savings goal does not set a spending target. Both charts now show Set spending target when unset.
+It opens Home's existing full-object planning form and Advanced section, focusing the matching week/month field.
+No savings-goal amount is substituted. Explicit0 remains a configured target. Average/target financial values unchanged.
+Both charts label lines avg. and goal above their left ends, with distinct colours, target stroke2 and white text halo.
+Axis padding and extendDomain keep zero and above-range targets visible. Weekly display remains8 periods.
+
+Browser360/390 on paired disabled backendf550b26: unset month Home action focusesmonthly_budget_eur;
+unset week Spending action focusesweekly_budget_eur. Existing form saved monthly10000 and weekly0 test targets.
+API readback preserved all six unknown planning amounts as null, horizon30 and repeatfalse.
+Monthly out-of-range target line/label visible; zero weekly line/label visible on Spending and Home;
+week/month amounts correctly separated, other customer remains unset. No financial arithmetic added.
+Evidence: qa/target-month-390.jpg, qa/target-zero-week-360.jpg.
+
+Coach empty-state now has a brief static local introduction, not a stored chat turn and no mount API call.
+Browser checked first open, empty reopen retains draft without duplicate intro, nonempty reopen has no intro,
+and customer switch gets a fresh empty intro. Session/bootstrap helper unchanged and tests pass.
+Build, Home rendering,8-week selection, Coach session and whitespace checks passed. No paid/provider calls.

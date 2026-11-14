@@ -109,7 +109,8 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
       <button disabled={busy} onClick={() => ask('Goal progress', null, 'My goals')}>My goals</button>
     </div>
     <div className="conversation-log" ref={log} role="log" aria-label="Conversation" aria-live="polite" tabIndex={0}>
-      {messages.length === 0 && <p className="conversation-empty">What would you like to explore?</p>}
+      {messages.length === 0 && <p className="conversation-empty">Hi, I’m your financial coach. I can help you understand
+        your spending, compare it with usual habits, and explore spending less. What would you like to explore?</p>}
       {messages.map((item, index) => <article className={item.user ? 'chat user' : 'chat'} key={index}>
         <small>{item.user ? 'You' : item.tool ? 'Coach' : coachModeLabel(item)}</small>
         {item.tool === 'savings' ? <CategoryReduction customer={customer} api={api} money={money} />
