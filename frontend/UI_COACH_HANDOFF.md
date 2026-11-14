@@ -118,3 +118,40 @@ for clarification instead of reusing the first customer's July context. Screensh
 No critical pairing blocker found. Paid-path concurrency recovery remains independently QA-tested, not
 recreated via provider calls here. All live tests in this workstream used paid-disabled mode.
 Final paired preview: http://127.0.0.1:5188 (5187 uses the older backend,5186 is mock-only).
+
+## Demo questions follow-up (14 November 2026)
+
+Manager-assigned branch: `codex/demo-coach-prompts-ui`, based on `dc40848a898133ce477ac9138981cd5527dd36cb`.
+Implementation commit: `709889da3294f8c9469a9ab412a4bb5c3331d4d2`; this handoff is committed separately.
+Took over the manager-designated `verda-manual-ui` checkout and preserved/finished its partial frontend work.
+No other worktrees, backend files, provider configuration, ledger, or server processes changed.
+
+Changed files:
+- `src/DemoQuestions.jsx`: customer-scoped read-only question loading, loading/error note, and explicitly labelled Demo questions.
+- `src/demoQuestions.js`: validates up to three server-supplied prompts; gates the contextual reduction follow-up.
+- `src/Coach.jsx`: sends selected questions through the existing guarded Coach path and offers What about 10% instead?
+  only on the latest usable reduction response, with no pending retry or error. Older cards cannot offer stale context.
+- `src/style.css`: four small rules for the disclosure, reusing the existing button layout and design.
+- `qa/check-demo-questions.mjs`: mock-only loading, customer scope, validation, send/retry identity and follow-up eligibility checks.
+- `UI_COACH_HANDOFF.md`: this appended record; prior evidence above is preserved.
+
+Explicit `.jsx` and `.js` imports fix the Windows basename collision between DemoQuestions and demoQuestions.
+The GET contract is `/api/customers/{id}/coach-demo-prompts` returning `{questions: [{id,label,question}],note}`.
+It does not submit questions. Clicking a suggestion or the 10% button creates a normal new user turn through the existing
+cookie/conversation/request-ID helper. Existing in-flight guard, manual identical-body retries, Python cards, historical dates,
+question/scenario behavior and goal confirmation are unchanged. No financial calculations or canned amounts were added.
+Backend `demo_guidance` responses render their ordinary help text with the existing rule-based label; no AI claim is added.
+
+Checks actually run and passed, from frontend:
+- `node qa/check-demo-questions.mjs`
+- `node qa/check-coach-session.mjs`
+- `node qa/check-coach-cards.cjs`
+- `node node_modules/vite/bin/vite.js build` (npm.cmd unavailable in this shell; same Vite build entry point)
+- `git diff --check`
+
+Build retains the pre-existing bundle-over-500kB warning. No dependencies or lockfiles changed.
+No browser interaction or responsive-layout verification was performed for these new buttons in this pass.
+The new endpoint is owned by backend branch `codex/coach-backend-readiness`; see its `backend/DEMO_PROMPTS_HANDOFF.md`.
+The existing manual backend on 8031 needs a USER restart to load that endpoint. This task did not contact or restart it.
+The existing frontend on 5193 points at this checkout and may hot-reload source changes; it was not started/restarted here.
+No live provider requests, paid activation, synthetic goal writes, merges, or deployment were performed.
