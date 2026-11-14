@@ -209,6 +209,10 @@ footer { color: #606b63; }
 .conversation-welcome { font-size: 17px; color: #244c36; margin: 12px 0; }
 .starting-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .coach .starting-actions button { padding: 8px 10px; font-size: 12px; border-radius: 18px; min-height: 40px; }
+.demo-questions { margin-bottom: 8px; flex-shrink: 0; }
+.demo-questions summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.demo-questions .starting-actions { margin: 8px 0 4px; }
+.demo-questions .fine { margin: 4px 0; }
 .conversation-log { flex: 1; overflow-y: auto; min-height: 120px; overscroll-behavior: contain; padding: 4px 2px 12px; }
 .conversation-empty { font-size: 13px; color: #727b75; margin: 18px 4px; }
 .conversation-log .chat { padding: 12px; margin: 8px 0; }

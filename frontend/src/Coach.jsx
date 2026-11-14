@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import CategoryReduction from './CategoryReduction';
 import CoachResult from './CoachResult';
+import DemoQuestions from './DemoQuestions.jsx';
+import { canFollowUpReduction } from './demoQuestions.js';
 import { createCoachSession, coachModeLabel, fallbackNotice } from './coachSession';
 
 export default function Coach({ customer, api, money, onSaved, initialQuestion = '', open = true }) {
@@ -108,6 +110,7 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
       <button disabled={busy} onClick={() => startTool('savings', 'Explore savings')}>Explore savings</button>
       <button disabled={busy} onClick={() => ask('Goal progress', null, 'My goals')}>My goals</button>
     </div>
+    <DemoQuestions customer={customer} api={api} busy={busy} onAsk={text => ask(text)} />
     <div className="conversation-log" ref={log} role="log" aria-label="Conversation" aria-live="polite" tabIndex={0}>
       {messages.length === 0 && <p className="conversation-empty">What would you like to explore?</p>}
       {messages.map((item, index) => <article className={item.user ? 'chat user' : 'chat'} key={index}>
@@ -129,6 +132,8 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
             <p>{item.text}</p>
             {fallbackNotice(item.fallback_reason) && <p className="fine">{fallbackNotice(item.fallback_reason)}</p>}
             {item.cards?.map((card, cardIndex) => <CoachResult key={cardIndex} card={card} money={money} />)}
+            {index === messages.length - 1 && !error && !retry && canFollowUpReduction(item) &&
+              <button disabled={busy} onClick={() => ask('What about 10% instead?')}>What about 10% instead?</button>}
             {item.analysis && <div className="conversation-result">
               <div className="row"><span>Current daily estimate</span><b>{money(item.baseline.daily_eur)}</b></div>
               <div className="row"><span>With this goal</span><b>{money(item.analysis.daily_eur)}</b></div>
