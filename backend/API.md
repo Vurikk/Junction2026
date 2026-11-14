@@ -177,3 +177,11 @@ The backend atomically readmits it only if no provider-call record/reservation e
 An admitted duplicate returns `request_in_progress`; a completed duplicate returns its saved response.
 Other failures, completed answers and requests with uncertain billing are never reopened by this rule.
 No automatic retry, new request ID, ledger deletion or schema migration is required.
+
+## Read-only cash-only spending estimate
+
+`GET /api/customers/{id}/spending-estimate` previews defaults; `POST` the same path calculates overrides.
+See [SPENDING_ESTIMATE_HANDOFF.md](SPENDING_ESTIMATE_HANDOFF.md) for exact UI contract and safety policy.
+Neither endpoint saves inputs, changes goals, calls a provider, nor changes the existing confirmed-plan `/budget` contract.
+Current mode requires accessible funds, reserve and the TOTAL essential bills due within the selected horizon.
+Historical bill/purchase references are automatic, dated estimates; current bills are never automatically prorated.

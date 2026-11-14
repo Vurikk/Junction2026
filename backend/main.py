@@ -323,3 +323,31 @@ async def coach_endpoint(request: Request, response: Response, customer_id: str,
         session, baseline, bootstrap=bootstrap, scenario=payload.scenario is not None, deadline=deadline,
         identified=payload.conversation_id is not None,
     )
+
+
+class SpendingEstimateInput(Model):
+    mode: Literal["current", "historical"] = "current"
+    horizon_days: int = Field(7, ge=1, le=366)
+    available_funds_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+    emergency_reserve_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+    upcoming_essential_bills_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+    additional_essential_bills_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+    everyday_spending_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+    voluntary_goal_contribution_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+
+
+def estimate_for(request, customer_id, payload):
+    from .spending_estimate import estimate
+    customer = customer_for(request, customer_id)
+    return estimate(customer, payload.model_dump(), request.app.state.goals[customer_id],
+                    request.app.state.assumptions[customer_id])
+
+
+@app.get("/api/customers/{customer_id}/spending-estimate")
+def default_spending_estimate(request: Request, customer_id: str):
+    return estimate_for(request, customer_id, SpendingEstimateInput())
+
+
+@app.post("/api/customers/{customer_id}/spending-estimate")
+def calculate_spending_estimate(request: Request, customer_id: str, payload: SpendingEstimateInput):
+    return estimate_for(request, customer_id, payload)
