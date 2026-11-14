@@ -238,7 +238,7 @@ def income_analysis(request: Request, customer_id: str):
 
 
 class CoachInput(Model):
-    question: str = Field(min_length=1, max_length=500)
+    question: str = Field(min_length=1, max_length=500, pattern=r"\S")
     scenario: GoalInput | None = None
 
 
@@ -249,9 +249,14 @@ def coach(request: Request, customer_id: str, payload: CoachInput):
     current = list(request.app.state.goals[customer_id])
     preview = None
     analysis = analyze_goals(request, customer_id)
+    baseline = analysis
     if payload.scenario is not None:
         preview = payload.scenario.model_dump(mode='json')
         current.append(Goal(**payload.scenario.model_dump(), id='preview', customer_id=customer_id))
         analysis = plan(request.app.state.assumptions[customer_id], current)
     recorded = history(customer, 'month') if not customer.get_transactions().empty else None
-    return answer(payload.question, analysis, current, recorded, preview)
+    result = answer(payload.question, analysis, current, recorded, preview, customer.has_mortgage_data())
+    if preview is not None:
+        result['baseline'] = Budget(**{key: baseline[key] for key in Budget.model_fields}).model_dump()
+        result['analysis'] = Budget(customer_id=customer_id, **analysis).model_dump()
+    return result

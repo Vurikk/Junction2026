@@ -92,7 +92,7 @@ function App() {
     event.preventDefault();
     const form = event.currentTarget;
     const fields = new FormData(form);
-    setBusy(true); setError('');
+    setBusy(true); setError(''); setGoalNotice('');
     try {
       await api(`customers/${customer}/goals`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -114,7 +114,7 @@ function App() {
       await api(`customers/${customer}/assumptions`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       });
-      setData({}); setAnalysis(null); setReload(value => value + 1);
+      setData({}); setAnalysis(null); setGoalNotice(''); setReload(value => value + 1);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   const spending = data.spending;

@@ -40,25 +40,30 @@ export default function Coach({ customer, api, money, onSaved }) {
     <div role="log" aria-live="polite">{messages.map((item, i) =>
       <article className={item.user ? 'chat user' : 'chat'} key={i}>
         <small>{item.user ? 'You' : 'Coach'}</small><p>{item.text}</p>
+        {item.analysis && <div>
+          <p>Current allowance: {money(item.baseline.daily_eur)}/day; {money(item.baseline.weekly_eur)}/week.</p>
+          <p>With this goal: {money(item.analysis.daily_eur)}/day; {money(item.analysis.weekly_eur)}/week.</p>
+          <p>Preview uses your current confirmed inputs. Amounts are estimates; no savings progress is assumed.</p>
+        </div>}
         {item.rows?.map(row => <div className="row" key={row.label}><span>{row.label}</span><b>{money(row.value)}</b></div>)}
       </article>)}</div>
     {error && <p role="alert">{error}</p>}
     {busy && <p role="status">Checking your plan...</p>}
     <form onSubmit={e => { e.preventDefault(); ask(question); setQuestion(''); }}>
       <label htmlFor="question">Your question</label>
-      <input id="question" value={question} onChange={e => setQuestion(e.target.value)} required maxLength={500} />
+      <input id="question" value={question} onChange={e => setQuestion(e.target.value)} required maxLength={500} disabled={busy} />
       <button disabled={busy || !question.trim()}>Ask coach</button>
     </form>
-    {scenario && <form onSubmit={e => {
+    {scenario && <form onChange={() => setPreview(null)} onSubmit={e => {
       e.preventDefault(); const fields = new FormData(e.currentTarget);
       ask('Preview this goal', Object.fromEntries(fields));
-    }}><h3>Try adding a goal</h3>
+    }}><fieldset disabled={busy}><legend>Try adding a goal</legend>
       <label htmlFor="preview-name">Name</label><input id="preview-name" name="name" required maxLength={100} />
       <label htmlFor="preview-amount">Amount (EUR)</label>
       <input id="preview-amount" name="amount_eur" type="number" min="0.01" max="9999999999.99" step="0.01" required />
       <label htmlFor="preview-priority">Priority</label><select id="preview-priority" name="priority">
         <option value="flexible">Flexible</option><option value="important">Important</option><option value="critical">Critical</option>
-      </select><button disabled={busy}>Preview without saving</button>
+      </select><button disabled={busy}>Preview without saving</button></fieldset>
     </form>}
     {preview && <div><p>Save {preview.name}, {money(preview.amount_eur)}, {preview.priority}?</p>
       <button disabled={busy} onClick={confirm}>Confirm and create goal</button>

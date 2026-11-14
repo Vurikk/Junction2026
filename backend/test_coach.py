@@ -36,6 +36,21 @@ class CoachTests(unittest.TestCase):
         self.assertNotIn('EUR', result['text'])
         self.assertIn('needed', answer('categories', self.analysis, [], None)['text'])
 
+    def test_category_only_and_absent_latest_category(self):
+        self.assertEqual(self.ask('How much on unknown?')['rows'], [{'label': 'unknown', 'value': 30.0}])
+        absent = self.ask('How much on housing?')
+        self.assertEqual(absent['kind'], 'categories')
+        self.assertEqual(absent['rows'], [])
+        self.assertIn('No included payments', absent['text'])
+        self.assertEqual(self.ask('weekly historical average')['kind'], 'average')
+
+    def test_unknown_values_and_mortgage(self):
+        self.assertIn('unknown', self.ask('current balance')['text'])
+        for available in (True, False):
+            result = answer('mortgage monthly payment', self.analysis, self.goals, mortgage_available=available)
+            self.assertIn('Monthly repayments are unknown', result['text'])
+            self.assertEqual(result['text'].startswith('Linked'), available)
+
     def test_preview_protects_priority_and_does_not_mutate(self):
         preview = SimpleNamespace(id='preview', name='Repair', amount_eur=300, priority='critical')
         simulated = plan(self.inputs, [*self.goals, preview])
@@ -53,6 +68,8 @@ class CoachApiTests(unittest.TestCase):
         state = SimpleNamespace(customers={key: fixture.customer() for key in ('a', 'b')},
                                 goals={'a': [], 'b': []},
                                 assumptions={key: Assumptions(**fixture.assumptions()).model_dump(mode='json') for key in ('a', 'b')})
+        for customer in state.customers.values():
+            customer.has_mortgage_data = lambda: False
         request = SimpleNamespace(app=SimpleNamespace(state=state))
         payload = CoachInput(question='what if', scenario={'name': 'Bike', 'amount_eur': '200', 'priority': 'flexible'})
         for key in ('a', 'b'):

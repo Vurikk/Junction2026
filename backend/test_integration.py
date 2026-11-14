@@ -53,13 +53,41 @@ class LiveIntegrationTests(unittest.TestCase):
                 initial = self.client.get(f'{base}/budget').json()
                 self.assertEqual(initial['status'], 'insufficient_data')
                 self.assertIsNone(initial['daily_eur'])
+                def ask(question, scenario=None):
+                    response = self.client.post(f'{base}/coach', json={'question': question, 'scenario': scenario})
+                    self.assertEqual(response.status_code, 200)
+                    return response.json()
+
+                unknown = ask('Daily and weekly allowance')
+                self.assertIn('Confirm on Home', unknown['text'])
+                self.assertNotIn('EUR', unknown['text'])
+                unknown_preview = ask('what if', {'name': 'Unknown plan', 'amount_eur': '100', 'priority': 'important'})
+                self.assertIsNone(unknown_preview['analysis']['daily_eur'])
+                self.assertEqual(self.client.get(f'{base}/goals').json(), [])
+                self.assertIn('unknown', ask('Current account balance')['text'])
                 spending = self.client.get(f'{base}/spending').json()
                 history = self.client.get(f'{base}/spending-history').json()
                 latest = next(p for p in history['periods'] if p['period'] == spending['month'])
                 self.assertEqual(latest['spending_eur'], spending['spending_eur'])
+                categories = ask('Spending by category')
+                self.assertEqual({row['label']: row['value'] for row in categories['rows']}, latest['categories'])
+                if latest['categories']:
+                    name = next(iter(latest['categories']))
+                    category_answer = ask(f'How much on {name}?')
+                    self.assertEqual(category_answer['kind'], 'categories')
+                    self.assertIn({'label': name, 'value': latest['categories'][name]}, category_answer['rows'])
+                average = ask('Spending vs historical average')
+                self.assertEqual(average['kind'], 'average')
+                if history['historical_average_eur'] is not None:
+                    self.assertIn(f"EUR {history['historical_average_eur']:,.2f}", average['text'])
                 self.assertEqual(self.client.get(f'{base}/income').status_code, 200)
                 mortgage = self.client.get(f'{base}/mortgages').json()
                 self.assertEqual(bool(mortgage['applications']), customer['has_mortgage_data'])
+                self.assertTrue(all(m['monthly_payment_eur'] is None for m in mortgage['applications']))
+                mortgage_answer = ask('What is my mortgage monthly payment?')
+                self.assertEqual(mortgage_answer['kind'], 'mortgage')
+                self.assertIn('Monthly repayments are unknown', mortgage_answer['text'])
+                self.assertEqual(mortgage_answer['text'].startswith('Linked'), customer['has_mortgage_data'])
                 ids = {}
                 for priority in ['flexible', 'important', 'critical']:
                     response = self.client.post(f'{base}/goals', json={
@@ -84,6 +112,35 @@ class LiveIntegrationTests(unittest.TestCase):
                 self.assertEqual([a['allocated_eur'] for a in analysis['allocations']], [200, 100, 0])
                 self.assertEqual([a['completion_periods'] for a in analysis['allocations']], [1, 2, 2])
                 self.assertEqual(self.client.get(f'{base}/goals').json(), before)
+                self.assertIn('EUR 3.33/day', ask('daily allowance')['text'])
+                self.assertIn('saved progress is unknown', ask('goal progress')['text'])
+                scenario = {'name': 'Confirmed scenario', 'amount_eur': '100.00', 'priority': 'critical'}
+                assumptions_before = self.client.get(f'{base}/assumptions').json()
+                other_id = 'CUST00001' if customer['customer_id'] == 'CUST04457' else 'CUST04457'
+                other_base = f'/api/customers/{other_id}'
+                other_goals = self.client.get(f'{other_base}/goals').json()
+                for _ in range(2):
+                    simulated = ask('Preview this goal', scenario)
+                    self.assertEqual(simulated['preview'], scenario)
+                    self.assertEqual(simulated['baseline'], budget)
+                    self.assertEqual(simulated['analysis']['allocations'][1]['goal_id'], 'preview')
+                    self.assertEqual(simulated['analysis']['allocations'][1]['allocated_eur'], 100)
+                    self.assertEqual(self.client.get(f'{base}/goals').json(), before)
+                    self.assertEqual(self.client.get(f'{base}/budget').json(), budget)
+                    self.assertEqual(self.client.get(f'{base}/assumptions').json(), assumptions_before)
+                invalid_preview = self.client.post(f'{base}/coach', json={
+                    'question': 'preview', 'scenario': {**scenario, 'amount_eur': '-1'},
+                })
+                self.assertEqual(invalid_preview.status_code, 422)
+                self.assertEqual(self.client.get(f'{base}/goals').json(), before)
+                confirmed = self.client.post(f'{base}/goals', json=simulated['preview'])
+                self.assertEqual(confirmed.status_code, 201)
+                self.assertEqual(len(self.client.get(f'{base}/goals').json()), len(before) + 1)
+                self.assertEqual(self.client.get(f'{other_base}/goals').json(), other_goals)
+                actual = self.client.get(f'{base}/goal-analysis').json()
+                self.assertEqual(actual['daily_eur'], simulated['analysis']['daily_eur'])
+                self.assertEqual([a['allocated_eur'] for a in actual['allocations']],
+                                 [a['allocated_eur'] for a in simulated['analysis']['allocations']])
                 for period, target in [('week', 70), ('month', 300)]:
                     chart = self.client.get(f'{base}/spending-history?period={period}').json()
                     self.assertEqual(float(chart['budget_target_eur']), target)
@@ -105,8 +162,10 @@ class LiveIntegrationTests(unittest.TestCase):
                 self.assertIsNone(self.client.get(f'{base}/budget').json()['daily_eur'])
         for customer in customers:
             base = f"/api/customers/{customer['customer_id']}"
-            self.assertEqual(len(self.client.get(f'{base}/goals').json()), 3)
+            self.assertEqual(len(self.client.get(f'{base}/goals').json()), 4)
         self.assertEqual(self.client.get('/api/customers/unknown/assumptions').status_code, 404)
+        self.assertEqual(self.client.post('/api/customers/unknown/coach', json={'question': 'goals'}).status_code, 404)
+        self.assertEqual(self.client.post(f'{base}/coach', json={'question': '   '}).status_code, 422)
 
 
 if __name__ == '__main__':

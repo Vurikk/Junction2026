@@ -104,5 +104,12 @@ The test uses local demo data and an isolated server; it never changes goals in 
 Returns `kind`, short `text`, and category `rows` (`label`, `value`) where relevant.
 Scenario replies also return the validated `preview` payload. This endpoint never writes state;
 confirming in the UI calls the existing goal POST. Scenarios model adding a goal, not editing one.
+Scenario replies include `baseline` and `analysis` objects with the Budget response fields, calculated before/after adding
+the hypothetical goal. Its temporary allocation ID is `preview`; confirmation creates a new actual goal ID.
+Unknown input amounts remain null in both views. Repeated previews leave stored goals, assumptions and budgets unchanged.
+Editing the scenario invalidates UI confirmation until a new preview is requested. Discard and customer switching do not save it.
 Goal-analysis adds `coach_message`; all existing fields remain compatible.
 No chat history, external provider or API key is required. Unknown questions get suggested topics.
+Whitespace-only questions are rejected (422). Category names can be asked directly; answers refer to the latest recorded month.
+An absent category is not proof of zero actual spending. Mortgage answers distinguish application data from active debt;
+monthly repayments and current account balances are not inferred from historical records.

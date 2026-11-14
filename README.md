@@ -48,7 +48,7 @@ Optional weekly/monthly chart targets are independent of safe allowances. Mortga
 ## Verify
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest backend.test_financial backend.test_api backend.test_integration -v
+.\.venv\Scripts\python.exe -m unittest backend.test_financial backend.test_coach backend.test_api backend.test_integration -v
 cd frontend
 npm.cmd run build
 ```
@@ -78,9 +78,24 @@ Category answers show the latest recorded month; averages compare the latest com
 with the average of complete months. Recorded coverage may be incomplete.
 Confirm planning inputs on Home for allowance and goal estimates. Saved progress is unavailable.
 Preview a goal with its name, amount and priority; only **Confirm and create goal** saves it.
+Preview shows current and hypothetical allowances. Editing any scenario field invalidates its confirmation;
+preview again before saving. Switching customers or discarding a preview does not create a goal.
 Goal creation also displays a short message from the existing goal-analysis API.
 
 Templates and question routing live in `backend/coach.py`; calculations remain in `backend/financial.py`.
 A future language provider can replace the presentation layer without changing the engine.
 Run synthetic checks without customer data: `python -m unittest backend.test_financial backend.test_coach -v`.
 Run `npm.cmd run build` inside `frontend` to verify the React production build.
+
+If the default ports are occupied, leave the existing servers intact and run the backend on another port,
+for example `--port 8011`. In the frontend terminal use:
+
+```powershell
+$env:SBANK_API_TARGET='http://127.0.0.1:8011'
+npm.cmd run dev -- --port 5174
+```
+
+The coach uses English keywords and category names, not general language understanding. Category answers use the latest month;
+average answers use complete calendar months. What-if scenarios only add one hypothetical goal; they do not edit goals or income.
+Mortgage applications never imply active debt or known repayments. Current balances and saved goal progress remain unknown.
+Confirmation creates a goal using the current plan; it does not lock a financial forecast or persist data across restarts.
