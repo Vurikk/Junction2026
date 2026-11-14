@@ -15,6 +15,8 @@ export default function CategoryReduction({ customer, api, money }) {
   const request = useRef(null);
   const version = useRef(0);
   const mounted = useRef(false);
+  const resultCard = useRef(null);
+  useEffect(() => { if (result) resultCard.current?.scrollIntoView({ block: 'nearest' }); }, [result]);
 
   useEffect(() => {
     mounted.current = true;
@@ -86,14 +88,12 @@ export default function CategoryReduction({ customer, api, money }) {
         value={percent} onChange={event => { invalidate(); setPercent(event.target.value); }} />
       <button className="primary" disabled={busy}>{busy ? 'Calculating…' : error ? 'Retry preview' : 'Preview change'}</button>
     </form>}
-    {result && <div className="reduction-result" role="status">
+    {result && <div className="reduction-result" role="status" ref={resultCard}>
       <h3>Potential spending reduction: {money(result.potential_reduction_eur)}</h3>
       <p>{result.category} · {result.source_period.start}–{result.source_period.end}</p>
       <div className="row"><span>Recorded spending</span><b>{money(result.baseline_spending_eur)}</b></div>
       <div className="row"><span>With {result.reduction_percent}% less</span><b>{money(result.hypothetical_spending_eur)}</b></div>
-      <p>Spending {result.reduction_percent}% less in this recorded month would reduce spending by
-        {' '}{money(result.potential_reduction_eur)}. This is a hypothetical change, not money already saved.</p>
-      <p className="fine">Goal timing impact is unavailable. Your goals and spending plan are unchanged.</p>
+      <p className="fine">Hypothetical change, not money already saved. Goal timing impact is unavailable.</p>
       <details><summary>How to read this preview</summary><p>{result.note}</p><p>{result.goal_impact_unavailable_reason}</p></details>
     </div>}
   </div>;
