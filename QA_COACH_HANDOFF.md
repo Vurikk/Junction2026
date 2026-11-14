@@ -421,3 +421,85 @@ Static checks cover unknown/zero distinction, manual-plan precedence and absence
 Not an exhaustive UI certification: delayed-response races, physical keyboard, new mobile dimensions,
 historical-mode browser flow and live manual-plan precedence were not independently repeated in this follow-up.
 The UI owner's broader tests remain separately attributed. No new critical issue was observed in this bounded pass.
+
+## Follow-up: automatic historical goal-driven budget at c349d65
+
+Backend: `c349d6555aa192aaede3db11b0ecbd60ef226b95`, `codex/data-backed-spending-estimate`.
+**Independent bounded backend PASS.** Conditional demo GO requires the new UI to identify historical EXTRA headroom
+above usual spending, app policies, source dates and uncertainty. This is not current affordability or a funded reserve.
+This automatic default supersedes the earlier manual-default product direction; the cash-only endpoint remains intact.
+No new automatic-UI browser pass is claimed by this QA section.
+
+### Policy and pre-commit review
+
+Manager approved a retrospective three-month policy: protect all included recorded spending, then contribute up to
+10% of average income toward a hypothetical reserve; allocate 50% of remaining surplus to goal targets by priority.
+Only actual capped allocations are deducted; unused goal budget returns to extra headroom.
+No goals produces needs_goal; absence of required evidence produces null, not a forced numeric demonstration.
+
+QA flagged the initial draft's silent exclusion of unexpected negative transaction types. Final source now blocks
+numeric results with `unclassified_debit_evidence:YYYY-MM`; only documented transfer/investment_deposit/refund
+exclusions remain. Unknown categories on ordinary purchases remain protected spending.
+QA also flagged an author's two-profile test using duplicate IDs; final independent HTTP checks used distinct IDs
+and materially different histories. Neither issue was fixed by QA; application ownership stayed with Agent2.
+
+Reviewed backend/AUTOMATIC_BUDGET_HANDOFF.md and exact implementation from an immutable git archive of c349d65.
+Same installed Python interpreter; COACH_LLM_ENABLED=false and PYTHONDONTWRITEBYTECODE=1 throughout.
+
+```powershell
+# In exported c349d65 source, initially without SBANK_DATA_DIR:
+& $qaPython -m unittest backend.test_automatic_demo_budget backend.test_spending_estimate `
+  backend.test_financial backend.test_data_coach -q
+# Then with SBANK_DATA_DIR pointing read-only at the existing original local backend/Data directory:
+& $qaPython -m unittest backend.test_automatic_demo_budget.RealAutomaticTests `
+  backend.test_spending_estimate.RealDemoEstimateTests -q
+```
+
+First command: 34 tests run, 32 passed and 2 dataset-dependent tests skipped (0.996 seconds).
+Second command: both skipped tests independently rerun with supplied data and passed (11.754 seconds).
+The real-profile automatic check independently recalculates monthly income/spending from rows inside the returned
+period for both supplied demo profiles; it checks three-month eligibility and no-goal null results.
+No raw records were printed or copied into this report, and no datasets were modified.
+No broad Coach suite rerun: delta from the previously verified estimate backend adds only a new module/GET route/tests/docs.
+Existing Coach runtime is unchanged in this commit; the separate incoming demo-prompts branch is not included here.
+
+### Independent adversarial probes
+
+Constructed a fresh synthetic fixture, without using the author's automatic-budget customer factory:
+January–March 2024 each have salary 1000, housing payment 300, grocery purchase 200 and uncertain-category purchase 100.
+Large positive transfers/refunds, investment deposits and very large account balances were also present.
+An April 1 boundary record brackets three complete months (91 days). None of those movement/balance amounts inflated headroom.
+Patched Ledger.transaction to raise on any paid-ledger access; guard never fired.
+
+| Case | Independently observed result |
+| --- | --- |
+| Large critical goal | Income 1000, protected spending 600, reserve 100, actual goal allocation 150, extra 150/month, 4.94/day, 34.58/week |
+| Goal target only 20 | Allocation 20; unused goal capacity returned: extra 280/month, 9.23/day, 64.61/week |
+| Priority and stable ties | Critical targets 60/60 allocated first in insertion order, important 30, flexible 0 |
+| Spending 950 | Reserve contribution 50, reserve shortfall 50, goals/headroom 0 |
+| Spending 1000 | Reserve shortfall 100, goals/headroom 0, deficit 0 |
+| Spending 1100 | Deficit 100, reserve shortfall 100, goals/headroom 0 |
+| No goals | needs_goal, no forced numeric estimate |
+| Unknown negative types | bank_fee, debt_payment and negative salary each block with dated unclassified-debit reason |
+| Missing February evidence | Removing salary or included spending blocks with the respective dated missing reason |
+| Zero recorded salary / partial coverage | insufficient_data, not inferred zero income or fabricated extra money |
+
+Separate TestClient checks loaded distinct synthetic CUST04457 and CUST00001 histories.
+First profile produced monthly extra 150; second had spending 1100 and reported deficit 100.
+Set a nonzero manual plan only on the first profile (45 days, repeat true, weekly/monthly targets 77/333),
+and created isolated test goals through the existing 201 POST contract. Before/after assumptions, goals and budget
+JSON were identical for both customers after automatic GET requests. No persistent or running-demo state was changed.
+
+### Compatibility and remaining limits
+
+Read incoming friend handoffs without merging or replacing local work:
+backend7170c21 has demo prompts but not local spending-estimate routes; UI3ef0553 branches before SafeToSpend and newer
+chart changes. Their additions require deliberate integration, not replacing the local trees wholesale.
+Friend QA27603ea is separate attributed evidence, including its corrected guidance identity bypass on7170c21;
+its root QA_COACH_HANDOFF.md must not overwrite this independently maintained report.
+No test pass for a combined friend/local tree is claimed.
+
+The automatic UI must show no-goal CTA, historical dates, extra-above-usual semantics and explicit 10%/50% app-policy disclosure.
+Reserve-building is not proof of reserve adequacy; active debt/current funds/payment timing remain unknown.
+The UI owner's incoming automatic pairing, delayed response isolation and responsive behavior are not independently verified here.
+Manager received the bounded backend PASS; no merges, provider calls, paid activation or code changes by QA.
