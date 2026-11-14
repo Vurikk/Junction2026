@@ -4,6 +4,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLin
 import './style.css';
 import Coach from './Coach';
 import Icon from './Icon';
+import HomeSummary, { PlanningContext } from './HomeSummary';
 
 const money = value => value == null ? 'Not available' : new Intl.NumberFormat('en-FI', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 2,
@@ -29,10 +30,11 @@ const planningFields = [
   ['monthly_budget_eur', 'Monthly chart target (optional)'],
 ];
 
-function PlanningForm({ assumptions, busy, onSave }) {
-  return <details className="planning"><summary>Optional spending plan</summary><section><h2>Confirm your spending plan</h2>
+function PlanningForm({ assumptions, suggestions, busy, onSave }) {
+  return <details className="planning" id="spending-plan"><summary>Optional spending plan</summary><section><h2>Confirm your spending plan</h2>
     <p>All amounts cover the same planning period. Enter zero where appropriate; blank means unknown.
       Do not include income already held in accessible funds. Confirm you can pay bills before everyday spending starts.</p>
+    <PlanningContext suggestions={suggestions} money={money} />
     <form onSubmit={event => {
       event.preventDefault();
       const values = new FormData(event.currentTarget);
@@ -90,22 +92,14 @@ function App() {
     if (!customer) return;
     const controller = new AbortController();
     setData({}); setError(''); setAnalysis(null);
-    ['spending', 'spending-history', 'budget', 'goals', 'assumptions', 'mortgages'].forEach(resource => {
-      const query = resource === 'spending-history' ? `?period=${period.toLowerCase()}` : '';
+    const resources = ['spending', 'spending-history', 'budget', 'goals', 'assumptions', 'mortgages',
+      'recorded-balances', 'spending-comparison', 'planning-suggestions'];
+    resources.forEach(resource => {
+      const query = ['spending-history', 'spending-comparison'].includes(resource) ? `?period=${period.toLowerCase()}` : '';
       api(`customers/${customer}/${resource}${query}`, { signal: controller.signal })
         .then(result => setData(old => ({ ...old, [resource]: result })))
         .catch(e => { if (e.name !== 'AbortError') setError(e.message); });
     });
-    return () => controller.abort();
-  }, [customer, period, reload]);
-  useEffect(() => {
-    if (!customer) return;
-    const controller = new AbortController();
-    api(`customers/${customer}/coach`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
-      body: JSON.stringify({ question: 'Spending vs historical average' }),
-    }).then(result => setData(old => ({ ...old, coachOverview: result.text })))
-      .catch(() => { /* Keep the unavailable overview fallback without blocking other sections. */ });
     return () => controller.abort();
   }, [customer, period, reload]);
   async function createGoal(event) {
@@ -143,7 +137,7 @@ function App() {
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   function openCoach(question = '') { setCoachQuestion(question); setPage('Coach'); }
-  const spending = data.spending;
+
   const history = data['spending-history'];
   const points = history?.periods;
   return <div className="app">
@@ -161,33 +155,16 @@ function App() {
       {error && <div className="error" role="alert">{error}<button disabled={busy} onClick={() => setReload(reload + 1)}>Try again</button></div>}
       {!customer && !error && <p role="status">Loading your profiles…</p>}
       {page === 'Home' && <>
-        <div className="home-overview">
-          <section className="home-balance"><h1>Balance</h1><strong>Not available</strong>
-            <p>Current bank balance is not supplied by this demo.</p></section>
-          <section className="home-coach"><h2>Financial coach overview</h2>
-            <p>{data.coachOverview || 'A historical comparison is not available yet. You can still explore recorded spending.'}</p>
-            <button className="text-button" onClick={() => openCoach('Spending vs historical average')}>Ask Coach</button>
-            <p className="fine">Rule-based explanation of recorded history.</p></section>
-          <section className="home-allowance"><h2>Estimated safe to spend</h2>
-            <p className="allowance-line">Per day <strong>{money(data.budget?.daily_eur)}</strong></p>
-            <p className="allowance-line">Per week <strong>{money(data.budget?.weekly_eur)}</strong></p>
-            <p className="fine">{data.budget?.status === 'estimated'
-              ? `Based on your confirmed ${data.budget.assumptions.horizon_days}-day plan.`
-              : 'Confirm missing amounts in the optional spending plan for an estimate.'}
-              {' '}Includes everyday costs; payment timing is not modeled.</p>
-            {data.budget?.shortfall_eur > 0 &&
-              <p role="alert">Bills and reserve shortfall: {money(data.budget.shortfall_eur)}</p>}
-          </section>
-          <div className="home-spending-link">
-            {spending?.month && <p className="fine">Recorded spending in {spending.month}: {money(spending.spending_eur)}</p>}
-            <button className="text-button" onClick={() => setPage('Spending')}>See where it went &rsaquo;</button>
-          </div>
-        </div>
+        <HomeSummary key={customer} data={data} money={money} openCoach={openCoach} onSpending={() => setPage('Spending')}
+          onPlan={() => {
+            const plan = document.getElementById('spending-plan');
+            if (plan) { plan.open = true; plan.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+          }} />
         <button className="home-goals text-button" onClick={() => setPage('Goals')}>Goals (optional) &rsaquo;</button>
         {data.assumptions && <PlanningForm key={`${customer}-${reload}`} assumptions={data.assumptions}
-          busy={busy} onSave={savePlan} />}
+          suggestions={data['planning-suggestions']} busy={busy} onSave={savePlan} />}
         <details className="supporting"><summary>Account and mortgage information</summary><section>
-          <p>Current account balance: Not available.</p><h2>Mortgage information</h2>
+          <p>Recorded balances are historical snapshots, not current available funds.</p><h2>Mortgage information</h2>
           <p>{data.mortgages ? (data.mortgages.applications.length
             ? 'Linked mortgage application data available.' : 'No linked mortgage application.') : 'Loading mortgage information…'}</p>
           <p>{data.mortgages?.note}</p></section></details>

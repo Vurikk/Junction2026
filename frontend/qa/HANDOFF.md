@@ -1,5 +1,59 @@
 # S-mobiili-inspired coaching UI
 
+## Current handoff: data-backed compact Home (14 November 2026)
+
+Implemented after the PM merged `origin/main` b9a6e39 into this UI branch (merge b30f56c).
+This section supersedes the older Home mappings and missing-balance blocker below.
+
+- Home reads `/recorded-balances`, labels the amount Recorded balance and shows its as-of date.
+  Null simultaneous totals display individual observed accounts; no client summation or assumptions substitution.
+- Tinted Coach card has a short status headline and one dated spending sentence from `/spending-comparison`.
+  Prior baseline/difference/limitations are optional details. Ask Coach is a full-width button into category exploration.
+  Existing chat averages have older semantics, so Home does not source its comparison from raw chat text.
+- Today/Week chooses backend daily/weekly estimates. The horizontal track is neutral with no filled fraction,
+  progressbar role or percentage; usage is explicitly unavailable. Estimate context includes everyday costs.
+- A separate compact historical bar chart appears below the allowance, with average/optional target lines.
+  Spending retains the full existing charts. Goals stay secondary, with no saved-progress claim.
+- `/planning-suggestions` supplies optional historical review context, dates, confidence and limitations.
+  No input is automatically copied, scaled or confirmed; food/everyday overlap is called out.
+  All six inputs and full-object confirmation semantics remain intact.
+- Restarted the isolated backend from this merged checkout on 8018. UI preview stays available on 5178.
+  Restart after testing cleared temporary goals and zero-valued test assumptions.
+
+Verification in this pass:
+
+- Final production build: PASS, 413 modules; existing >500 kB bundle warning remains.
+- `node frontend/qa/check-home.cjs`: PASS. Uses installed esbuild/React, no added dependencies.
+  Rendering fixtures cover null/zero balance and allowance, separate accounts with missing observations,
+  above/below/equal comparisons and absence of invented progress semantics.
+- Live browser: both real synthetic profiles showed their own historical balance/date and structured comparison.
+  Actual CSS viewport widths 360/390, document widths 345/375 with scrollbar; no horizontal overflow.
+- Today/Week retained unknown values; six explicitly entered zeros produced EUR 0.00 in both selections.
+  Historical suggestions displayed while inputs stayed blank before confirmation.
+- Saved test period 45, repeat=true and targets 70/300; resaved with Advanced collapsed.
+  API readback verified every advanced value survived. Recorded balance was not replaced by available funds=0.
+- Ask Coach opened a prefilled category question and returned real categories.
+  Goal preview required confirmation; confirmed test goal appeared in Goals.
+  Home View all opened Spending with bars, average and categories.
+- Stopped backend and reloaded: fetch error, unavailable balance/comparison/allowance and disabled planning action.
+  Restarted and pressed Retry: new endpoint data recovered.
+- Updated `home-360.jpg`, `home-390.jpg`; added `home-chart-390.jpg` showing the distinct historical chart.
+
+Not verified in browser: synthetic multi-account/zero-bank-balance cases (covered by rendering fixtures),
+individual-endpoint failure injection, physical devices, screen reader operation or delayed-request races.
+No backend code/tests or financial policy changed. The test harness initially failed due to a missing module
+filename; that harness issue was fixed and its final run passes.
+
+Remaining API/product requests:
+
+1. A meaningful allowance fill requires a backend-defined same-period denominator and consumed/remaining amount,
+   with period start/end, as-of timestamp, confirmed baseline and unknown/zero semantics. Current allowance values
+   alone cannot provide a usage fraction. UI intentionally shows no actual-progress fill.
+2. Conversational plan negotiation and goal-timeline impact remain absent. Historical suggestions require review.
+3. `/category-reduction` now exists, but this Home-focused change does not add its explicit category/period form.
+   Coach copy distinguishes the existing keyword chat from that unwired calculator. It must not imply the backend
+   lacks category reduction or promise goal impact (the endpoint returns null goal_impact).
+
 ## Follow-up: simplified Home (14 November 2026)
 
 Supersedes the original Home mapping below. Home now presents one vertical surface:

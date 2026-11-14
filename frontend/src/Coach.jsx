@@ -41,7 +41,7 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
     <p className="coach-label">Rule-based demo coach</p>
     <p>Explore recorded categories, compare with your usual spending or check an allowance.</p>
     <p className="fine">Uses English keywords and prepared explanations, not a live AI model.
-      What-if previews can add a goal; category reductions are not supported yet.
+      This chat previews adding a goal; the category-reduction calculator is not connected here.
       Estimates need a confirmed optional Home plan.</p>
     <div className="suggestions">{suggestions.map(text =>
       <button key={text} disabled={busy} onClick={() => ask(text)}>{text}</button>)}</div>

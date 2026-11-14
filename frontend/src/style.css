@@ -150,3 +150,30 @@ footer { color: #606b63; }
 .home-spending-link { padding: 18px 0; }
 .home-spending-link p { margin: 0 0 4px; }
 .home-goals { display: block; padding: 16px 0 0; }
+.recorded-balance { background: transparent; padding: 24px 2px 16px; margin-bottom: 0; }
+.recorded-balance h1 { font-size: 14px; font-weight: 400; color: #626862; margin: 0 0 4px; letter-spacing: 0; }
+.recorded-balance strong { font-size: 34px; letter-spacing: -1px; color: #202421; }
+.recorded-balance p { margin: 4px 0; }
+.recorded-balance summary, .coach-overview summary, .allowance-summary summary { font-size: 11px; min-height: 32px; padding: 6px 0; }
+.coach-overview { background: #d7efdf; padding: 18px; }
+.coach-kicker { font-size: 12px; color: #176d4b; margin: 0 0 6px; }
+.coach-overview h2 { font-size: 21px; margin-bottom: 6px; }
+.coach-overview > p:not(.coach-kicker) { font-size: 13px; margin: 6px 0 12px; }
+.coach-action { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 10px 16px; min-height: 44px; }
+.coach-action span { font-size: 22px; }
+.allowance-summary { padding: 18px; }
+.allowance-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.allowance-heading h2 { font-size: 18px; margin: 0; }
+.allowance-toggle { display: flex; flex-shrink: 0; }
+.allowance-toggle button { background: transparent; border: 0; color: #626862; padding: 5px 9px; font-size: 13px; }
+.allowance-toggle button[aria-pressed='true'] { background: #eaf6ed; color: #176d4b; border-radius: 20px; font-weight: bold; }
+.allowance-amount { display: block; font-size: 29px; color: #007b48; margin-top: 10px; }
+.allowance-summary > p { margin: 5px 0; }
+.allowance-track { height: 9px; border-radius: 20px; background: #e0e5e1; margin: 12px 0 8px; }
+.allowance-summary > .text-button { font-size: 13px; text-align: left; }
+.home-chart h2 { font-size: 19px; }
+.home-chart .text-button { font-size: 13px; }
+.home-chart .section-title { align-items: center; }
+.home-chart .section-title h2 { margin-bottom: 0; }
+.planning-context { border-bottom: 1px solid #dfe5df; margin-bottom: 12px; }
+#spending-plan { scroll-margin-top: 16px; }
