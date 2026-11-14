@@ -230,7 +230,7 @@ footer { color: #606b63; }
 .coach-dialog { width: min(560px, calc(100vw - 32px)); height: min(760px, calc(var(--coach-height, 100dvh) - 48px));
   max-height: none; max-width: none; padding: 0; border: 0; border-radius: 20px; color: #202421;
   background: white; overflow: hidden; position: fixed; top: var(--coach-top, 0px); bottom: 0; }
-.coach-dialog::backdrop { background: rgb(12 31 21 / 48%); }
+.coach-dialog::backdrop { background: rgb(0 0 0 / 32%); }
 .coach-dialog[open] { display: flex; flex-direction: column; }
 .coach-dialog-heading { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
   border-bottom: 1px solid #d9e4dc; flex-shrink: 0; }
