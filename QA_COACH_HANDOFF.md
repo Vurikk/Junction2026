@@ -503,3 +503,36 @@ The automatic UI must show no-goal CTA, historical dates, extra-above-usual sema
 Reserve-building is not proof of reserve adequacy; active debt/current funds/payment timing remain unknown.
 The UI owner's incoming automatic pairing, delayed response isolation and responsive behavior are not independently verified here.
 Manager received the bounded backend PASS; no merges, provider calls, paid activation or code changes by QA.
+
+## Follow-up: historical total-spending chart target at 1441e0a
+
+Exact backend `1441e0a20ecc2dac7c03837872271a80af6de720`. **Bounded backend PASS.**
+Verified from an immutable git archive with paid mode disabled; no UI rendering claim for this newest pairing.
+Read the route/helper diff and additive API/provenance handoff. No implementation files changed by QA.
+
+Executed `backend.test_automatic_demo_budget.ChartTargetTests`, `backend.test_financial`,
+and `backend.test_data_coach`: **20 tests passed** (0.777 seconds).
+These include the large-goal reference case: monthly total target 750 and weekly 173.07, not extra-only 150.
+
+Independent TestClient probes built a separate synthetic three-month fixture with monthly income 1000,
+housing 300, uncertain-category purchase 300, positive refunds and large recorded balances.
+Second customer had an unknown negative debit type in February. Paid-ledger access was guarded to raise.
+
+- Before goals, automatic target is null.
+- Goal target 20 produces TOTAL spending target 880/month and 203.07/week, not extra-only headroom 280.
+- Source is automatic_historical with 2024-01-01 through 2024-03-31 provenance.
+- Every returned bar's start/spending value and the historical average exactly match direct `history()` without a target.
+- Unknown-debit customer's automatic target is null in both periods.
+- Explicit manual zero wins in week and month independently; the other period still derives its automatic target.
+- Manual weekly 25 remains available even with unavailable automatic data; that customer's monthly target stays null.
+- Estimate/history GET requests leave assumptions, goals and budget JSON unchanged; paid-ledger guard never fired.
+
+An initial QA assertion compared manual target JSON directly to numeric 25; the established API returns decimal strings
+for manual targets (`"25"`) and numeric values for automatic targets. Corrected Decimal comparison passed.
+This preserves the existing API convention and is not an application defect; frontend formatting must retain that support.
+
+Metadata describes a historical typical-period benchmark, not current affordability or a separately confirmed budget
+for every older bar. Source scope matches the bars' included purchase/housing/utilities payments; unknown debits block
+automatic derivation rather than silently inflating headroom. Manual targets remain independent user chart settings.
+UI provenance wording, visible line placement and eight-week rendering require the owner's new pairing verification;
+those visual checks were not independently rerun here. No broad Coach rerun or provider call was needed for this isolated delta.
