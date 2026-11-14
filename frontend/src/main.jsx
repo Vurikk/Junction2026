@@ -5,7 +5,7 @@ import './style.css';
 import Coach from './Coach';
 import CoachDialog from './CoachDialog';
 import Icon from './Icon';
-import HomeSummary, { PlanningContext } from './HomeSummary';
+import HomeSummary, { ChartTargetContext, PlanningContext } from './HomeSummary';
 import { chartPeriods } from './chartPeriods';
 
 const money = value => value == null ? 'Not available' : new Intl.NumberFormat('en-FI', {
@@ -197,7 +197,7 @@ function App() {
         <section><div className="section-title"><h2>Spending history</h2><span className="tag">Recorded</span></div>
           <div className="segmented">{['Week', 'Month'].map(value => <button key={value} aria-pressed={period === value}
             disabled={busy} onClick={() => { if (value !== period) { setData({}); setPeriod(value); } }}>{value}</button>)}</div>
-          {history ? <div className="chart" role="img" aria-label={`${period} spending with historical average and confirmed chart target`}>
+          {history ? <div className="chart" role="img" aria-label={`${period} spending with historical average and chart target`}>
             <ResponsiveContainer width="100%" height={230}><BarChart data={chartPeriods(history)}
               margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
               <XAxis dataKey="start" tickLine={false} axisLine={false} />
@@ -213,8 +213,10 @@ function App() {
                   stroke: 'white', strokeWidth: 3, paintOrder: 'stroke' }} />}
             </BarChart></ResponsiveContainer></div> : <p role="status">{error ? 'Spending unavailable.' : 'Loading spending…'}</p>}
           <p className="legend">– – {period} average: {money(history?.historical_average_eur)}</p>
-          {history?.budget_target_eur != null ? <p>{period} spending target: {money(history.budget_target_eur)}</p>
+          {history?.budget_target_eur != null ? <p>{history.target_source === 'automatic_historical'
+            ? 'Estimated plan target' : `${period} spending target`}: {money(history.budget_target_eur)}</p>
             : <button className="text-button" disabled={!data.assumptions} onClick={openTarget}>Set spending target</button>}
+          <ChartTargetContext history={history} />
           <p className="fine">Chart targets are separate from safe spending allowances. Edge periods may be partial.</p>
           {points?.length > 0 && <><h3>Categories in the latest displayed period</h3>
           <p className="fine">{points?.at(-1)?.start} to {points?.at(-1)?.end}

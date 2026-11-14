@@ -82,13 +82,22 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
             </BarChart>
           </ResponsiveContainer>
         </div><p className="fine">Dashed: historical average {money(history.historical_average_eur)}
-          {history.budget_target_eur != null && ` · Target ${money(history.budget_target_eur)}`}</p>
+          {history.budget_target_eur != null && ` · ${history.target_source === 'automatic_historical'
+            ? 'Estimated plan target' : 'Target'} ${money(history.budget_target_eur)}`}</p>
+        <ChartTargetContext history={history} />
       </> : <p className="fine">Spending history unavailable.</p>}
       {history && history.budget_target_eur == null && <button className="text-button" disabled={!data.assumptions}
         onClick={onTarget}>Set spending target</button>}
       <button className="text-button" onClick={onSpending}>See where it went ›</button>
     </section>
   </>;
+}
+
+export function ChartTargetContext({ history }) {
+  if (history?.target_source !== 'automatic_historical' || history.budget_target_eur == null) return null;
+  return <p className="fine">Includes usual spending and extra headroom.
+    {history.target_source_period && ` Based on ${history.target_source_period.start}–${history.target_source_period.end}.`}
+    {' '}Historical scenario, not a past spending limit.</p>;
 }
 
 export function PlanningContext({ suggestions, money }) {

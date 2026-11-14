@@ -206,3 +206,19 @@ Final preview shows Create a goal with no test goals. No provider calls or paid 
 Added readable unclassified-debit missing-data reason from final backend contract.
 Known unchanged copy: existing goal-save notice still points to optional manual planning; the automatic Home estimate
 works without those inputs. Goal UI was explicitly out of scope and left unchanged. No other UI regressions retested here.
+
+## Goal-driven chart target (paired backend1441e0a)
+
+Existing goal line now receives a Python total-spending target from spending-history when no manual target exists.
+UI changes only compact automatic provenance in HomeSummary/main: Estimated plan target, source dates and historical
+scenario disclaimer. Existing goal/avg labels, bars, latest8weeks and manual labels remain unchanged. No JS arithmetic.
+Backend owns matching-period manual precedence including0, else protected spending plus extra headroom, normalized weekly.
+Build, Home null/manual0/automatic label checks, chart8week checks and whitespace passed. Existing bundle warning remains.
+Real pairing: temporary100goal for each profile returned week/month targets610.42/2674.26 and515.48/2258.33 respectively.
+Browser checked first profile Home monthly and Spending monthly/weekly; both avg/goal lines visible. Full second-profile
+chart browser matrix and manual0 browser replay not repeated; independent backend QA covers42owner tests and20focused checks.
+Final preview http://127.0.0.1:5191/ ->8030, archived1441e0a20ecc2dac7c03837872271a80af6de720, explicitpaidfalse.
+After verifying only our2QAgoalIDs existed, restarted ONLY isolated8030, then copied current goals and full assumptions
+read-only from8029 into8030:1CUST04457goal,0CUST00001. Goal names/amounts/priorities retained; POST assigns new IDs.
+Old8029 was never modified/restarted. No ledger, credentials or rawdataset copied. Final user monthlytarget2724.26,
+avg1992.52, visible blue goal line; screenshot goal-line-preserved-390.jpg. No merge/provider calls.

@@ -62,3 +62,12 @@ const goals = render({ goals: [{ id: 'fixture', name: 'Fixture goal', amount_eur
 for (const text of ['Current goals', 'Add goal', 'Fixture goal', 'EUR 10.00', 'critical']) assert.ok(goals.includes(text));
 assert.match(render({ goals: [] }), /No goals yet/);
 assert.doesNotMatch(render({ goals: [] }), /Fixture goal/);
+const targetHistory = { period: 'week', periods: [{ start: '2026-08-24', end: '2026-08-30', spending_eur: 10 }],
+  historical_average_eur: 15, budget_target_eur: 0 };
+const autoTarget = render({ 'spending-history': { ...targetHistory, target_source: 'automatic_historical' } });
+assert.match(autoTarget, /Estimated plan target EUR 0.00/);
+const manualTarget = render({ 'spending-history': { ...targetHistory, target_source: 'manual' } });
+assert.match(manualTarget, /Target EUR 0.00/);
+assert.doesNotMatch(manualTarget, /Estimated plan target/);
+assert.match(render({ 'spending-history': { ...targetHistory, budget_target_eur: null } }), /Set spending target/);
+console.log('PASS: automatic provenance, manual zero and unavailable chart target.');
