@@ -3,6 +3,25 @@
 Existing customer, spending and mortgage routes retain their fields and semantics.
 No LLM is connected. All user inputs and goals are per-customer, in memory, reset on restart.
 
+## Data-backed Home and read-only reduction scenarios
+
+Four additive routes are available; existing routes and the six confirmed allowance inputs remain unchanged.
+Exact request/response schemas, data audit, UI guidance and historical demo policy proposal are in
+[DATA_COACH_HANDOFF.md](DATA_COACH_HANDOFF.md).
+
+| Request (under `/api/customers/{id}`) | Result |
+| --- | --- |
+| `GET /recorded-balances` | Latest per-account balance, EUR, timestamp, historical status; current funds remain unknown |
+| `GET /spending-comparison?period=week\|month` | Latest full elapsed period versus prior full periods, dates, difference and status |
+| `GET /planning-suggestions` | Dated historical monthly estimates, confidence, limitations and six field-specific confirmation reasons |
+| `POST /category-reduction` | Read-only potential category spending reduction for an explicit historical week/month |
+
+The reduction request requires `category`, `period` (`week` or `month`), `period_start` (ISO date), and
+`reduction_percent` (0-100, at most two decimal places). Returns baseline, hypothetical spending and potential reduction;
+never actual savings or goal mutations. Unsupported/missing category observations return 404; invalid/partial periods return 422.
+The comparison baseline excludes the comparison period. Coverage is not guaranteed completeness.
+Balances from different timestamps are never added into a simultaneous total. These endpoints do not confirm assumptions.
+
 ## Assumptions
 `GET` / `PUT /api/customers/{id}/assumptions` reads/replaces the full assumptions object.
 Only send PUT after user confirmation. Omitted monetary fields become null; explicit zero is allowed.
