@@ -215,3 +215,35 @@ Reported to the project manager chat before implementation:
 
 Ownership notice sent to the prior frontend chat and project manager before editing.
 Changes are limited to `frontend/src/main.jsx`, `Coach.jsx`, `Icon.jsx`, `style.css` and this QA directory.
+
+## Navigation-anchored Coach popup (14 November 2026)
+
+Supersedes the full-page conversation layout. Rollback checkpoint e81c1c3 and
+branch codex/coach-before-popup are preserved. No backend or financial changes.
+All four entries (Home Ask Coach, header, navigation, Spending prompt) open the
+same native modal dialog without changing the underlying page. Latest user
+feedback requests a sheet extending from the navigation: it slides up above
+that bar, with expand/collapse controls. Reduced-motion preferences are respected.
+Conversation, drafts and unconfirmed previews survive close/reopen for the same
+customer. Customer changes remount Coach and abort/invalidate its pending work.
+Prefills populate an empty composer without replacing an existing draft.
+Native modal background isolation, explicit Tab wrapping, Escape/close, focus
+restoration and body scroll locking are included. Visual viewport size changes
+resize the sheet; composer remains separate from the scrolling conversation.
+
+Verified in browser: all four entries, 360/390px widths, desktop width1100,
+expand/collapse, forward focus wrap, Escape and focus return, preserved draft,
+retained reduction/goal preview on reopen, customer isolation, editing goal
+invalidates confirmation, unknown goal allowances, and scroll position540
+restored exactly. Real restaurant reduction: CUST04457 July20%=19.01 EUR;
+CUST00001 September20%=45.14 EUR. No goal was saved in this popup test.
+390x450 reduced-height test: composer bottom436px within viewport450px.
+Physical phone keyboards, screen-reader announcements, reverse Tab wrapping,
+new delayed/error popup scenarios and goal-save submission were not retested;
+existing request guards/confirmation implementation remain intact.
+
+Final production build passed (existing >500kB bundle warning). Existing Home
+render checks and reduction real-HTTP regression passed, including null/zero,
+both profiles, 0/20/100%, 404/422 and nonmutation. No paid/provider calls.
+Screenshots: coach-popup-360.jpg (reduction sheet), coach-popup-390.jpg (opening).
+Preview remains http://localhost:5178. Verda contract wiring remains pending.

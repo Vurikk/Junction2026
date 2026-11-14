@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import CategoryReduction from './CategoryReduction';
 
-export default function Coach({ customer, api, money, onSaved, initialQuestion = '' }) {
+export default function Coach({ customer, api, money, onSaved, initialQuestion = '', open = true }) {
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -13,6 +13,9 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
   const mounted = useRef(false);
   const log = useRef(null);
   const composer = useRef(null);
+  useEffect(() => {
+    if (open && initialQuestion) setQuestion(current => current || initialQuestion);
+  }, [initialQuestion, open]);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; pending.current?.abort(); };
@@ -89,17 +92,13 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
     setDraft(old => ({ ...old, [key]: value }));
   }
   return <section className="coach coach-conversation" aria-label="Financial coach conversation">
-    <div className="conversation-mode"><span>Rule-based demo</span><details><summary>How it works</summary>
-      <p>Prepared explanations and guided calculations. English keywords only; follow-up memory and live AI are not connected.</p>
-    </details></div>
-    <p className="conversation-welcome">Let’s make sense of your money. Where shall we start?</p>
     <div className="starting-actions">
       <button disabled={busy} onClick={() => ask('Spending by category', null, 'Understand spending')}>Understand spending</button>
       <button disabled={busy} onClick={() => startTool('savings', 'Explore savings')}>Explore savings</button>
       <button disabled={busy} onClick={() => ask('Goal progress', null, 'My goals')}>My goals</button>
     </div>
     <div className="conversation-log" ref={log} role="log" aria-label="Conversation" aria-live="polite" tabIndex={0}>
-      {messages.length === 0 && <p className="conversation-empty">Choose a starting point or ask a question below.</p>}
+      {messages.length === 0 && <p className="conversation-empty">What would you like to explore?</p>}
       {messages.map((item, index) => <article className={item.user ? 'chat user' : 'chat'} key={index}>
         <small>{item.user ? 'You' : 'Coach'}</small>
         {item.tool === 'savings' ? <CategoryReduction customer={customer} api={api} money={money} />

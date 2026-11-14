@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import './style.css';
 import Coach from './Coach';
+import CoachDialog from './CoachDialog';
 import Icon from './Icon';
 import HomeSummary, { PlanningContext } from './HomeSummary';
 
@@ -79,6 +80,7 @@ function App() {
   const [analysis, setAnalysis] = useState(null);
   const [reload, setReload] = useState(0);
   const [coachQuestion, setCoachQuestion] = useState('');
+  const [coachOpen, setCoachOpen] = useState(false);
   const [goalNotice, setGoalNotice] = useState('');
   useEffect(() => { window.scrollTo(0, 0); }, [page]);
   useEffect(() => {
@@ -136,7 +138,7 @@ function App() {
       setData({}); setAnalysis(null); setGoalNotice(''); setReload(value => value + 1);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
-  function openCoach(question = '') { setCoachQuestion(question); setPage('Coach'); }
+  function openCoach(question = '') { setCoachQuestion(question); setCoachOpen(true); }
 
   const history = data['spending-history'];
   const points = history?.periods;
@@ -147,6 +149,7 @@ function App() {
     <main>
       <div className="customer"><label htmlFor="customer">Your demo profile</label>
         <select id="customer" value={customer} disabled={busy || !customers.length} onChange={e => {
+          setCoachOpen(false); setCoachQuestion('');
           setData({}); setAnalysis(null); setGoalNotice(''); setCustomer(e.target.value);
         }}><option value="" disabled>Select customer</option>
           {customers.map(item => <option key={item.customer_id}>{item.customer_id}</option>)}</select></div>
@@ -237,8 +240,9 @@ function App() {
           <button className="primary" disabled={busy || !customer || !data.goals}>{busy ? 'Please wait…' : 'Create goal'}</button>
         </form></section>
       </>}
-      {page === 'Coach' && customer && <Coach key={`${customer}-${reload}`} customer={customer}
-        api={api} money={money} initialQuestion={coachQuestion}
+      {customer && <CoachDialog open={coachOpen} onClose={() => setCoachOpen(false)}>
+        <Coach key={customer} customer={customer}
+        api={api} money={money} initialQuestion={coachQuestion} open={coachOpen}
         onSaved={() => {
           if (activeCustomer.current !== customer) return;
           ['goals', 'budget'].forEach(resource => api(`customers/${customer}/${resource}`)
@@ -246,12 +250,12 @@ function App() {
               if (activeCustomer.current === customer) setData(old => ({ ...old, [resource]: result }));
             }).catch(e => { if (activeCustomer.current === customer) setError(e.message); }));
           setAnalysis(null); setGoalNotice('');
-        }} />}
+        }} /></CoachDialog>}
       <footer>S-Bank inspired · Junction 2026<br />Historical synthetic demo data</footer>
     </main>
     <nav aria-label="Main navigation">{['Home', 'Spending', 'Coach', 'Goals'].map(name =>
       <button key={name} aria-current={page === name ? 'page' : undefined}
-        onClick={() => { setCoachQuestion(''); setPage(name); window.scrollTo(0, 0); }}>
+        onClick={() => { if (name === 'Coach') openCoach(); else { setPage(name); window.scrollTo(0, 0); } }}>
         <Icon name={name} />{name}</button>)}</nav>
   </div>;
 }

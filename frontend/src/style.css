@@ -227,3 +227,34 @@ footer { color: #606b63; }
 .chat-composer small { margin-top: 6px; font-size: 10px; color: #727b75; }
 @media (max-height: 600px) { .coach-conversation { height: auto; min-height: 360px; }
   .conversation-log { max-height: 220px; } }
+.coach-dialog { width: min(560px, calc(100vw - 32px)); height: min(760px, calc(var(--coach-height, 100dvh) - 48px));
+  max-height: none; max-width: none; padding: 0; border: 0; border-radius: 20px; color: #202421;
+  background: white; overflow: hidden; position: fixed; top: var(--coach-top, 0px); bottom: 0; }
+.coach-dialog::backdrop { background: rgb(12 31 21 / 48%); }
+.coach-dialog[open] { display: flex; flex-direction: column; }
+.coach-dialog-heading { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
+  border-bottom: 1px solid #d9e4dc; flex-shrink: 0; }
+.coach-dialog-heading h2 { margin: 0; font-size: 20px; }
+.coach-dialog-heading small { display: block; font-size: 11px; font-weight: normal; color: #626862; margin-top: 4px; }
+.coach-dialog-heading button { width: 44px; height: 44px; padding: 0; font-size: 28px; background: transparent; border: 0; }
+.coach-dialog .coach-conversation { flex: 1; min-height: 0; height: auto; margin: 0; border-radius: 0; }
+.coach-dialog .conversation-log { min-height: 0; max-height: none; }
+.coach-dialog .chat-composer { scroll-margin: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+@media (max-width: 600px) {
+  .coach-dialog { width: 100%; height: calc(var(--coach-height, 100dvh) - 12px); margin: 12px 0 0;
+    border-radius: 18px 18px 0 0; }
+}
+/* Coach grows from the navigation edge, keeping its point of entry visible. */
+.coach-dialog { top: auto; bottom: 72px; margin: 0 auto; width: min(560px, 100vw);
+  height: min(600px, calc(var(--coach-height, 100dvh) * .68));
+  max-height: calc(var(--coach-height, 100dvh) - 88px); border-radius: 18px 18px 0 0;
+  transition: height 220ms ease; }
+.coach-dialog.expanded { height: calc(var(--coach-height, 100dvh) - 88px); }
+.coach-dialog[open] { animation: coach-slide-up 220ms ease-out; }
+.coach-dialog-heading .coach-expand { margin-left: auto; }
+@keyframes coach-slide-up { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@media (max-height: 500px) { .coach-dialog { bottom: 0; height: calc(var(--coach-height, 100dvh) - 8px);
+  max-height: calc(var(--coach-height, 100dvh) - 8px); } }
+@media (prefers-reduced-motion: reduce) { .coach-dialog { transition: none; } .coach-dialog[open] { animation: none; } }
+.coach-dialog { bottom: max(72px, calc(100dvh - var(--coach-height, 100dvh) - var(--coach-top, 0px) + 72px)); }
+@media (max-height: 500px) { .coach-dialog { bottom: 0; } }
