@@ -315,3 +315,80 @@ These are HTTP-boundary tests, not a new browser-to-deployed-backend run.
 - No new browser work duplicated the UI owner's checks. No fresh production build, full original-data suite,
   physical keyboard, live provider or combined final-candidate deployment check was performed here.
 - No merge or paid activation performed. Manager received exact hash, PASS evidence and conditional recommendation.
+
+## Follow-up: Safe to spend backend verification at 86d657f
+
+Exact local backend commit: `86d657f4bff79a7d281fe1539cf2d426a2bb9b86`,
+branch `codex/data-backed-spending-estimate`, based on verified `f550b26`.
+Verdict: **bounded backend PASS; conditional GO pending the actual UI pairing checks.**
+This is a read-only cash-only estimate, not proof of current bank liquidity or complete transaction coverage.
+Backend branch publication status is separate from this local commit verification.
+
+### Early findings and disposition
+
+- Contract review flagged prorated historical rent as insufficient protection for a bill due tomorrow.
+  Manager/backend accepted the correction: current mode always requires confirmed TOTAL upcoming bills,
+  alongside current accessible funds and reserve. Additional-bills zero cannot replace the total.
+  Historical rates remain dated reference/scenario evidence, not upcoming payment dates.
+- On the uncommitted draft, independently reproduced `TypeError: fromisoformat: argument must be str`
+  for historical mode with empty transaction coverage. Reproduction: create `fixture()`, replace its
+  `_transactions` with `.iloc[0:0].copy()`, then request historical estimate.
+  Fixed and verified in `86d657f`: HTTP 200, insufficient_data, reference_date/daily allowance null.
+  Constructing `fixture(records=[])` fails in the fixture constructor itself; that was not counted as an application bug.
+
+### Exact execution and results
+
+Exported `86d657f` through `git archive` into a separate temporary directory; did not switch or edit another checkout.
+Read backend/SPENDING_ESTIMATE_HANDOFF.md, route input validation, estimate implementation and tests.
+Used the existing interpreter with `COACH_LLM_ENABLED=false`, `PYTHONDONTWRITEBYTECODE=1`, and no SBANK_DATA_DIR.
+
+```powershell
+& $qaPython -m unittest backend.test_spending_estimate backend.test_financial backend.test_data_coach `
+  backend.test_coach_language backend.test_coach_routing backend.test_coach_single_call backend.test_verda `
+  backend.test_coach_browser_contract backend.test_coach_qa_regressions -q
+```
+
+Result: **94 tests run, 93 passed, 1 skipped**, no failures (5.715 seconds).
+Skipped: original-dataset estimate check requiring SBANK_DATA_DIR. No original-dataset verification claimed.
+Prior Coach fixes remain covered and passing. Only existing deprecation/debug timing notices were emitted.
+
+Additional independent FastAPI TestClient probes used two synthetic profiles: ordinary fixture CUST04457,
+and CUST00001 with its transaction frame emptied. Patched `Ledger.transaction` to raise on any paid-ledger access.
+Set a nonzero confirmed plan only on the first profile: funds 1234, income 99, bills 200, reserve 300,
+everyday 50, contribution 150, horizon 45, repeat true, weekly/monthly chart targets 77/333.
+Created three isolated test goals in flexible/critical/important insertion order, each EUR 200.
+These mutations were in disposable TestClient memory only, not an existing backend or dataset.
+
+Observed assertions passed:
+
+| Gate | Independent observation |
+| --- | --- |
+| Default current unknown | Both profiles return null daily allowance despite first profile's recorded history |
+| Due-rent protection | Funds 1000, reserve 100, TOTAL bills 700, 7 days gives weekly 199.99 (daily 28.57 in suite) |
+| No unknown-to-zero | Omitting each of funds/reserve/total bills returns null and its missing field, even with additional bills 0 |
+| Input safety | Negative funds/reserve/bills/everyday/contribution each return 422 for both profiles |
+| Future income | Supplying confirmed_income_eur to the new endpoint returns 422; this cash-only contract does not accept it |
+| Empty historical coverage | HTTP 200 with null reference_date/daily allowance; draft exception no longer occurs |
+| Goal protection/priority | Funds 1000, reserve 200, bills 400, everyday 100, contribution 300 allocates 200/100/0 by priority |
+| No repeated starting cash | All estimate goal completion_periods remain null; daily allowance 14.28 in that goal case |
+| Manual-plan preservation | Full assumptions/goals/budget JSON equal before/after estimate GET/POST for both profiles |
+| Customer independence | First manual_plan_available true; second false; second profile's blank plan remains unchanged |
+| No paid ledger | The access guard never fired during these HTTP probes |
+
+The initial independent probe incorrectly expected HTTP 200 for goal creation, whose existing contract returns 201.
+Correcting that QA assertion yielded the results above; no application change was needed.
+
+The existing estimate tests additionally passed calendar-day scaling (not a fixed 30-day divisor), transfer exclusion,
+asynchronous/missing historical balance handling, balance-reference dating, explicit zero, shortfall and no-repeat checks.
+Source review confirms income is response evidence only, no mortgage application is read as a debt obligation,
+and all arithmetic uses Python. Mortgage application data are not an independent debt-verification source.
+
+### Remaining pairing conditions
+
+- UI must visibly distinguish historical scenarios/current user-provided estimates, show dates and uncertainty,
+  and disclose the default no-earmark policy beside the result; existing critical goals are not automatically funded.
+- UI must prefer a complete confirmed manual budget without silently overwriting partial or hidden plan fields.
+- Customer switching and late responses must not display another profile's estimate.
+- These new UI behaviors and actual paired browser execution belong to the UI owner's independent workstream;
+  QA has not claimed a browser pass for them here. Original customer datasets and physical keyboard also remain untested by QA.
+- No merge, provider call, paid activation, canonical-ledger access, or implementation/test/configuration edit by QA.
