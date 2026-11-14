@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { chartPeriods } from '../src/chartPeriods.js';
+const periods = Array.from({ length: 12 }, (_, index) => ({ start: `week-${index}`, spending_eur: index }));
+const weekly = { period: 'week', periods, historical_average_eur: 99, budget_target_eur: 100 };
+assert.deepEqual(chartPeriods(weekly), periods.slice(4));
+assert.equal(chartPeriods(weekly).length, 8);
+assert.equal(weekly.periods.length, 12);
+assert.equal(weekly.historical_average_eur, 99);
+assert.equal(weekly.budget_target_eur, 100);
+assert.equal(chartPeriods({ ...weekly, period: 'month' }), periods);
+assert.deepEqual(chartPeriods({ period: 'week', periods: periods.slice(0, 3) }), periods.slice(0, 3));
+console.log('PASS: latest eight weekly periods, original order/values, short history and monthly history unchanged.');

@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, ReferenceLine } from 'recharts';
+import { chartPeriods } from './chartPeriods';
 
 const date = value => value ? value.slice(0, 10) : 'Date unavailable';
 
-export default function HomeSummary({ data, money, openCoach, onSpending, onPlan }) {
+export default function HomeSummary({ data, money, openCoach, onSpending, onPlan, onAddGoal }) {
   const [range, setRange] = useState('Today');
   const balances = data['recorded-balances'];
   const comparison = data['spending-comparison'];
   const budget = data.budget;
   const history = data['spending-history'];
+  const points = chartPeriods(history);
   const headlines = { below: 'Spending below your usual', above: 'Spending above your usual', equal: 'Spending matches your usual' };
   const headline = headlines[comparison?.status] || 'Let’s explore your spending';
   const allowance = range === 'Today' ? budget?.daily_eur : budget?.weekly_eur;
@@ -62,13 +64,20 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
           No consumed fraction is available, so the neutral track does not show progress.</p>
     </details>
     </div>
+    <section className="home-current-goals"><div className="section-title"><h2>Current goals</h2>
+      <button className="text-button" onClick={onAddGoal}>Add goal</button></div>
+      {!data.goals ? <p>Goals unavailable.</p> : data.goals.length === 0 ? <p>No goals yet.</p>
+        : data.goals.map(goal => <div className="row" key={goal.id}>
+          <span>{goal.name}<small className="fine">{goal.priority}</small></span><b>{money(goal.amount_eur)}</b>
+        </div>)}
+    </section>
     <section className="home-chart"><div className="section-title"><h2>Spending history</h2>
       <button className="text-button" onClick={onSpending}>View all ›</button></div>
-      {history?.periods?.length ? <>
-        <p className="fine">{history.periods[0].start}–{history.periods.at(-1).end} · Recorded {history.period} periods</p>
+      {points?.length ? <>
+        <p className="fine">{points[0].start}–{points.at(-1).end} · Recorded {history.period} periods</p>
         <div role="img" aria-label="Recorded spending bars with historical average and optional chart target">
           <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={history.periods} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+            <BarChart data={points} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
               <XAxis dataKey="start" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={45} />
               <Tooltip formatter={value => money(value)} />
               <Bar dataKey="spending_eur" name="Recorded spending" fill="#008c45" radius={[3, 3, 0, 0]} />

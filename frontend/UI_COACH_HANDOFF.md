@@ -81,3 +81,26 @@ qa/full-app-disabled-coach-390.jpg. No provider calls/paid activation, no backen
 This verifies UI-to-backend HTTP operation in disabled mode; cookie identity/deduplication enforcement in the paid path,
 physical phone keyboards, budget-line editing and weekly chart switching were not additionally exercised here.
 The manager's pending backend concurrency fix must be reviewed before changing the current final-result notice.
+
+## Latest eight weeks and Home goals (14 November 2026)
+
+User-approved scope adds Current goals on Home with Add goal opening/focusing the existing three-field goal form.
+Actual current-customer names, target amounts and priorities are shown, with an empty/unavailable state.
+No saved amount is offered because the GoalInput contract does not support it. No progress/feasibility is invented.
+Both Home and Spending weekly charts use the last eight API periods in original chronological order;
+monthly charts and full-history detail disclosure remain unchanged. Backend average/target values are untouched.
+Changed main.jsx, HomeSummary.jsx, style.css, new chartPeriods.js, check-chart-periods.mjs and check-home.cjs.
+
+Read-only inspection of backend fixf550b26 confirms concurrency_limit can be explicitly retried with identical IDs/body
+when the ledger proves no provider call/reservation started. Coach.jsx and coachSession.js now restore that manual Retry
+and busy notice; session regression includes concurrency_limit. No automatic retry or new UUID was introduced.
+Backend fix was NOT merged into this branch; pairing with f550b26 or newer is needed for transient busy readmission.
+
+Verified on isolated paid-disabled full app5187/8026 at360/390: eight rendered bars in Spending for both customers,
+eight in Home, chronological visible ISO labels, unchanged API historical averages445.85/486.95 EUR,
+Current goals populated on CUST04457 and empty on CUST00001. Add goal focused name with field visible, then one
+explicit EUR12 goal save through the existing form appeared on Home. Other customer's Home stayed empty.
+Screenshots: qa/weekly-eight-360.jpg, qa/home-current-goals-360.jpg, qa/home-current-goals-390.jpg.
+Build, chart-period selection, Home render, Coach session checks and diff whitespace checks passed.
+This local backend does not contain f550b26; its runtime behavior is separately owned/tested by backend and QA.
+No provider call, backend edit, new dependency or merge was performed.

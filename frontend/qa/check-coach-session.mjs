@@ -86,7 +86,7 @@ assert.match(fallbackNotice('clarification_needed'), /clarify/);
 assert.match(fallbackNotice('unsupported_period_or_category'), /unavailable/);
 assert.match(fallbackNotice('request_conflict'), /not automatically/);
 // All non-bootstrap HTTP-200 fallback states stop after the original turn, even if a retry might later work.
-for (const reason of ['timeout', 'budget_exhausted', 'request_in_progress', 'rate_limited', 'clarification_needed',
+for (const reason of ['timeout', 'budget_exhausted', 'request_in_progress', 'rate_limited', 'concurrency_limit', 'clarification_needed',
   'unsupported_period_or_category', 'request_conflict', 'conversation_mismatch', 'billing_uncertain']) {
   const bodies = [];
   const client = createCoachSession(async (path, options) => {

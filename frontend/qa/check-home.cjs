@@ -58,3 +58,7 @@ for (const status of ['above', 'below', 'equal']) {
   assert.doesNotMatch(html, /on track|doing well|saved progress/);
 }
 console.log('Home contract rendering checks passed: null, zero, separate accounts, comparisons and neutral track.');
+const goals = render({ goals: [{ id: 'fixture', name: 'Fixture goal', amount_eur: 10, priority: 'critical' }] });
+for (const text of ['Current goals', 'Add goal', 'Fixture goal', 'EUR 10.00', 'critical']) assert.ok(goals.includes(text));
+assert.match(render({ goals: [] }), /No goals yet/);
+assert.doesNotMatch(render({ goals: [] }), /Fixture goal/);

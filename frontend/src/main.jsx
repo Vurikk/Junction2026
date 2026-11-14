@@ -6,6 +6,7 @@ import Coach from './Coach';
 import CoachDialog from './CoachDialog';
 import Icon from './Icon';
 import HomeSummary, { PlanningContext } from './HomeSummary';
+import { chartPeriods } from './chartPeriods';
 
 const money = value => value == null ? 'Not available' : new Intl.NumberFormat('en-FI', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 2,
@@ -82,7 +83,11 @@ function App() {
   const [coachQuestion, setCoachQuestion] = useState('');
   const [coachOpen, setCoachOpen] = useState(false);
   const [goalNotice, setGoalNotice] = useState('');
+  const [focusGoal, setFocusGoal] = useState(false);
   useEffect(() => { window.scrollTo(0, 0); }, [page]);
+  useEffect(() => {
+    if (page === 'Goals' && focusGoal) { document.getElementById('name')?.focus(); setFocusGoal(false); }
+  }, [page, focusGoal]);
   useEffect(() => {
     const controller = new AbortController();
     api('customers', { signal: controller.signal }).then(items => {
@@ -159,11 +164,11 @@ function App() {
       {!customer && !error && <p role="status">Loading your profiles…</p>}
       {page === 'Home' && <>
         <HomeSummary key={customer} data={data} money={money} openCoach={openCoach} onSpending={() => setPage('Spending')}
+          onAddGoal={() => { setPage('Goals'); setFocusGoal(true); }}
           onPlan={() => {
             const plan = document.getElementById('spending-plan');
             if (plan) { plan.open = true; plan.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
           }} />
-        <button className="home-goals text-button" onClick={() => setPage('Goals')}>Goals (optional) &rsaquo;</button>
         {data.assumptions && <PlanningForm key={`${customer}-${reload}`} assumptions={data.assumptions}
           suggestions={data['planning-suggestions']} busy={busy} onSave={savePlan} />}
         <details className="supporting"><summary>Account and mortgage information</summary><section>
@@ -179,7 +184,8 @@ function App() {
           <div className="segmented">{['Week', 'Month'].map(value => <button key={value} aria-pressed={period === value}
             disabled={busy} onClick={() => { if (value !== period) { setData({}); setPeriod(value); } }}>{value}</button>)}</div>
           {history ? <div className="chart" role="img" aria-label={`${period} spending with historical average and confirmed chart target`}>
-            <ResponsiveContainer width="100%" height={230}><BarChart data={points} margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={230}><BarChart data={chartPeriods(history)}
+              margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
               <XAxis dataKey="start" tickLine={false} axisLine={false} />
               <YAxis tickLine={false} axisLine={false} /><Tooltip formatter={value => money(value)} />
               <Bar dataKey="spending_eur" name="Spent" fill="#008c45" radius={[5, 5, 0, 0]} />

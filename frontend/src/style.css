@@ -172,6 +172,11 @@ footer { color: #606b63; }
 .allowance-track { height: 9px; border-radius: 20px; background: #e0e5e1; margin: 12px 0 8px; }
 .allowance-summary > .text-button { font-size: 13px; text-align: left; }
 .home-chart h2 { font-size: 19px; }
+.home-current-goals h2 { font-size: 19px; margin: 0; }
+.home-current-goals .section-title { align-items: center; }
+.home-current-goals .row { gap: 12px; overflow-wrap: anywhere; }
+.home-current-goals .row > span { min-width: 0; }
+.home-current-goals small { display: block; text-transform: capitalize; }
 .home-chart .text-button { font-size: 13px; }
 .home-chart .section-title { align-items: center; }
 .home-chart .section-title h2 { margin-bottom: 0; }

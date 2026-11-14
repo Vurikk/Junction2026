@@ -51,10 +51,7 @@ export function fallbackNotice(reason) {
   if (['provider_error', 'timeout', 'invalid_model_output', 'billing_uncertain'].includes(reason)) {
     return 'AI is unavailable. Showing the rule-based answer.';
   }
-  if (reason === 'concurrency_limit') {
-    return 'Coach could not process this message while another was active. This result is final for this request.';
-  }
-  if (['rate_limited', 'request_in_progress'].includes(reason)) {
+  if (['rate_limited', 'concurrency_limit', 'request_in_progress'].includes(reason)) {
     return 'Coach is busy. You can retry this same message.';
   }
   if (reason === 'privacy_blocked') return 'Please ask without personal details or pasted transaction records.';
