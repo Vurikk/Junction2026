@@ -31,7 +31,7 @@ const zero = render({
   'recorded-balances': { simultaneous_total_eur: 0, total_recorded_at: '2026-09-30T12:00:00' },
   budget: { daily_eur: '0', weekly_eur: '0', status: 'estimated', assumptions: { horizon_days: 30 } },
 });
-assert.equal((zero.match(/EUR 0.00/g) || []).length, 2);
+assert.equal((zero.match(/EUR 0.00/g) || []).length, 1);
 assert.match(zero, /2026-09-30/);
 assert.doesNotMatch(zero, /allowance-track|Usage tracking unavailable/);
 

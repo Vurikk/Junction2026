@@ -173,3 +173,21 @@ backend allocation behavior is separately tested by its owner/independent QA. No
 
 Current preview: http://127.0.0.1:5189 (earlier5188 lacks spending-estimate endpoint; use5189 for this feature).
 Screenshots show ephemeral sample inputs solely as test evidence; live preview has been reset to honest unavailable state.
+
+## Automatic extra spending UI (supersedes the manual estimate default)
+
+Only SafeToSpend and its Home prop hook changed; existing design, Coach, charts and Add goal form are unchanged.
+No-goals uses the existing Add goal callback. Unknown goals remain unavailable. With goals, GET
+`customers/{id}/automatic-demo-budget` renders Python daily/weekly values, including zero, only for status estimated.
+Source dates and a historical/not-current-affordability caveat stay visible. Policy, monthly breakdown and missing evidence
+are in a collapsed explanation. No manual inputs, POST, assumptions write, goal mutation or frontend financial calculation.
+Old optional spending planning elsewhere remains intact. No friend branch integration or merges.
+
+Validation: production build passed (existing bundle-size warning); check-home.cjs and check-safe-spend.cjs passed.
+Browser mock fixture at 360/390: day/week, zero, insufficient data despite non-null fixture amounts, dated explanation,
+load error/manual retry, customer reset and abort-ignoring late replies all checked. Actual full app no-goals CTA opens
+existing Goals form and focuses name; no overflow at 360px. Saved evidence automatic-no-goals-360.jpg (real app),
+automatic-estimate-fixture-390.jpg (clearly labeled mock). Tests made no provider calls or paid activation.
+At this checkpoint, real automatic endpoint pairing awaits the backend owner's committed build; current preview5189
+still uses backend86d657f. Mock values are fixtures only and are never used by the production component.
+Commit: the commit containing this section (git log -1 -- frontend/src/SafeToSpend.jsx).

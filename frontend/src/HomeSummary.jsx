@@ -29,7 +29,7 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
           <path d="M12 1 15 9 23 12 15 15 12 23 9 15 1 12 9 9Z" /></svg>Ask Coach</button>
     </section>
     <SafeToSpend customer={customer} api={api} money={money} budget={budget} assumptions={data.assumptions}
-      onPlan={onPlan} refreshKey={refreshKey} />
+      onPlan={onPlan} refreshKey={refreshKey} goals={data.goals} onAddGoal={onAddGoal} />
     </div>
     <details className="money-details"><summary>Details</summary>
       <h3>Balance source</h3>
