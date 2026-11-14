@@ -350,7 +350,8 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['fallback_reason'], 'rate_limited')
         self.assertEqual(self.requests, [])
         disabled = CoachLLM()
-        result = await disabled.respond(self.customer, 'current account balance', self.conversation, str(uuid4()), self.session, BASELINE)
+        baseline = {**BASELINE, 'kind': 'unknown'}  # Actual rule-based classification for a current-balance question.
+        result = await disabled.respond(self.customer, 'current account balance', self.conversation, str(uuid4()), self.session, baseline)
         self.assertEqual(result['text'], BASELINE['text'])
         self.assertEqual(result['fallback_reason'], 'disabled')
 

@@ -8,6 +8,7 @@ import time
 from uuid import NAMESPACE_URL, uuid5
 
 from .coach_ledger import GateError
+from .coach_local_state import LocalCoachState
 from .coach_tools import TOOLS, clarification_text, expected_selection, facts_for, routing_context, run_tool, sanitize_question, selection
 from .verda import VerdaClient, settings_from_env
 
@@ -29,6 +30,7 @@ class CoachLLM:
         self.reason = unavailable_reason
         self.deadline_seconds = min(deadline_seconds, 15)
         self.lock = asyncio.Lock()
+        self.local_state = LocalCoachState()
 
     @classmethod
     def from_env(cls):
@@ -43,6 +45,37 @@ class CoachLLM:
         if self.provider:
             await self.provider.close()
 
+    def local_response(self, customer, clean, conversation_id, request_id, session, response):
+        """Same grounded Python tools without a provider, credentials or persistent billing state."""
+        owner, customer_scope = digest(session), digest(customer.customer_id)
+        key = digest(owner + ':' + customer_scope + ':' + request_id)
+        fingerprint = digest(json.dumps([conversation_id, clean], separators=(',', ':')))
+        previous, selected, claimed = None, None, False
+        try:
+            previous = self.local_state.conversation(conversation_id, owner, customer_scope)
+            cached = self.local_state.claim(key, fingerprint)
+            if cached is not None:
+                return cached
+            claimed = True
+            selected = expected_selection(clean, previous, customer)
+            card = run_tool(customer, selected)
+            facts = facts_for(card)
+            response.update(cards=[card], rows=[], fallback_reason=self.reason,
+                            kind={'category_reduction': 'scenario', 'category_spending': 'categories',
+                                  'spending_comparison': 'average'}[card['type']],
+                            text=' '.join([facts['summary'], *(value for key, value in facts.items() if key != 'summary')]))
+        except GateError as error:
+            reason = str(error)
+            text = 'This conversation or request is unavailable. Start a new conversation.'
+            if reason == 'clarification_needed':
+                text = clarification_text(clean, previous)
+            elif reason == 'unsupported_period_or_category':
+                text = 'No usable records match the requested category and period. Please choose a recorded month or week.'
+            response.update(kind='help', rows=[], cards=[], text=text, fallback_reason=reason)
+        if claimed:
+            self.local_state.finish(key, response, conversation_id, selected if response['cards'] else None)
+        return response
+
     async def respond(self, customer, question, conversation_id, request_id, session, baseline,
                       *, bootstrap=False, scenario=False, deadline=None, identified=True):
         deadline = min(deadline or float('inf'), time.monotonic() + self.deadline_seconds)
@@ -51,17 +84,17 @@ class CoachLLM:
                     'request_id': request_id, 'cards': []}
         if scenario:
             return {**response, 'fallback_reason': 'goal_preview'}
-        if not self.provider:
-            return {**response, 'fallback_reason': self.reason}
         if baseline.get('kind') in {'goals', 'mortgage', 'unknown'}:
-            return {**response, 'fallback_reason': 'unsupported_topic'}
+            return {**response, 'fallback_reason': 'unsupported_topic' if self.provider else self.reason}
         try:
             clean = sanitize_question(question)
         except GateError:
             if baseline.get('kind') == 'allowance':
-                return {**response, 'fallback_reason': 'unsupported_topic'}
+                return {**response, 'fallback_reason': 'unsupported_topic' if self.provider else self.reason}
             return {**response, 'kind': 'help', 'rows': [], 'text': 'Please use a short financial question without personal details.',
                     'fallback_reason': 'privacy_blocked'}
+        if not self.provider:
+            return self.local_response(customer, clean, conversation_id, request_id, session, response)
         if bootstrap:
             return {**response, 'fallback_reason': 'session_initialized'}
         if not identified:

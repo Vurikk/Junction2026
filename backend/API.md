@@ -152,3 +152,28 @@ a persistent host-bound SQLite ledger, and `COACH_LLM_BUDGET_EUR`; the old USD v
 
 See [VERDA_HANDOFF.md](VERDA_HANDOFF.md) for exact fields/card schemas, fallback reasons, privacy controls,
 model/pricing evidence, duplicate semantics, setup gates and the controlled smoke command. No paid mode was enabled during implementation.
+
+### Disabled/unavailable provider behavior (QA-01/02)
+
+Supported spending questions use the same local language/date validation and Python tools even without a provider.
+Successful local answers have `mode: rule_based`, existing cards/text fields, and the configuration fallback reason
+(for example `disabled` or `missing_configuration`). They do not imply a model call.
+Ambiguity returns `clarification_needed`; absent/partial requested history returns `unsupported_period_or_category`
+with empty cards/rows. An unavailable requested month is never replaced with the latest observed month.
+Food ambiguity and dated percentage follow-ups use validated local context. Goal previews and other existing non-spending
+answers retain their behavior. No financial formulas, confirmed inputs or goals change.
+
+Free-mode context and duplicate receipts live only in this backend process, independently of the paid ledger.
+They expire after 30 minutes and are bounded to 256 conversations overall, 32 per browser and 2048 request receipts.
+Context is isolated by browser session and customer. Matching receipts return the original response; changed bodies with
+the same request identity return `request_conflict`. A capacity limit returns `session_limit` rather than evicting live receipts.
+After a restart or expiry, repeat the category and recorded period; free context is not recovered from the billing ledger.
+Paid request receipts/reservations retain their existing persistent behavior.
+
+### Retrying a busy rejection (QA-03)
+
+An identical request that returned `concurrency_limit` may be retried explicitly with the SAME IDs and body.
+The backend atomically readmits it only if no provider-call record/reservation exists and rate limits permit admission.
+An admitted duplicate returns `request_in_progress`; a completed duplicate returns its saved response.
+Other failures, completed answers and requests with uncertain billing are never reopened by this rule.
+No automatic retry, new request ID, ledger deletion or schema migration is required.

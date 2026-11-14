@@ -72,16 +72,25 @@ class LiveIntegrationTests(unittest.TestCase):
                 latest = next(p for p in history['periods'] if p['period'] == spending['month'])
                 self.assertEqual(latest['spending_eur'], spending['spending_eur'])
                 categories = ask('Spending by category')
-                self.assertEqual({row['label']: row['value'] for row in categories['rows']}, latest['categories'])
-                if latest['categories']:
-                    name = next(iter(latest['categories']))
-                    category_answer = ask(f'How much on {name}?')
+                self.assertEqual(categories['mode'], 'rule_based')
+                self.assertEqual(categories['fallback_reason'], 'disabled')
+                breakdown = categories['cards'][0]['data']
+                dated = next(p for p in history['periods'] if p['period'] == breakdown['source_period']['start'][:7])
+                self.assertFalse(dated['partial'])
+                self.assertEqual(breakdown['spending_eur'], dated['spending_eur'])
+                self.assertAlmostEqual(sum(row['spending_eur'] for row in breakdown['categories'])
+                                       + breakdown['other_spending_eur'], dated['spending_eur'], places=2)
+                if dated['categories']:
+                    name = next(iter(dated['categories']))
+                    category_answer = ask(f"How much on {name} in {dated['period']}?")
                     self.assertEqual(category_answer['kind'], 'categories')
-                    self.assertIn({'label': name, 'value': latest['categories'][name]}, category_answer['rows'])
+                    self.assertEqual(category_answer['cards'][0]['data']['spending_eur'], dated['categories'][name])
+                    self.assertEqual(category_answer['cards'][0]['data']['source_period'], breakdown['source_period'])
                 average = ask('Spending vs historical average')
                 self.assertEqual(average['kind'], 'average')
-                if history['historical_average_eur'] is not None:
-                    self.assertIn(f"EUR {history['historical_average_eur']:,.2f}", average['text'])
+                comparison = self.client.get(f'{base}/spending-comparison?period=month').json()
+                for key in ('comparison', 'baseline', 'difference_eur', 'status'):
+                    self.assertEqual(average['cards'][0]['data'][key], comparison[key])
                 self.assertEqual(self.client.get(f'{base}/income').status_code, 200)
                 mortgage = self.client.get(f'{base}/mortgages').json()
                 self.assertEqual(bool(mortgage['applications']), customer['has_mortgage_data'])

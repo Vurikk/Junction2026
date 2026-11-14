@@ -128,11 +128,21 @@ class Ledger:
                     raise GateError('request_conflict')
                 if row[1] is None:
                     raise GateError('request_in_progress')
-                return json.loads(row[1])
-            recent = db.execute('SELECT session FROM requests WHERE created>?', (now - 60,)).fetchall()
+                cached = json.loads(row[1])
+                # Only a proven-unstarted busy rejection may be readmitted. Keep its original fingerprint.
+                prefix = key + ':'
+                called = db.execute('SELECT 1 FROM calls WHERE key=? OR substr(key, 1, ?)=? LIMIT 1',
+                                    (key, len(prefix), prefix)).fetchone()
+                if (cached.get('fallback_reason') != 'concurrency_limit' or cached.get('mode') != 'rule_based'
+                        or cached.get('cards') or called):
+                    return cached
+            recent = db.execute('SELECT session FROM requests WHERE created>? AND key<>?', (now - 60, key)).fetchall()
             if len(recent) >= 12 or sum(r[0] == session for r in recent) >= 4:
                 raise GateError('rate_limited')
-            db.execute('INSERT INTO requests VALUES(?, ?, ?, ?, NULL)', (key, fingerprint, session, now))
+            if row:
+                db.execute('UPDATE requests SET response=NULL, created=? WHERE key=?', (now, key))
+            else:
+                db.execute('INSERT INTO requests VALUES(?, ?, ?, ?, NULL)', (key, fingerprint, session, now))
         return None
 
     def finish(self, key, response, conversation_id, context=None):

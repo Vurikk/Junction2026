@@ -291,8 +291,8 @@ class SingleCallTests(unittest.IsolatedAsyncioTestCase):
         result = await disabled.respond(self.customer, QUESTION, self.conversation, str(uuid4()), self.session, BASELINE)
         self.assertEqual(result['mode'], 'rule_based')
         self.assertEqual(result['fallback_reason'], 'disabled')
-        self.assertEqual(result['text'], BASELINE['text'])
-        self.assertEqual(result['cards'], [])
+        self.assertIn('EUR 320.00', result['text'])
+        self.assertEqual(result['cards'][0]['data']['potential_reduction_eur'], 80)
         self.assertEqual(self.requests, [])
         self.assertEqual(self.calls(), [])
 

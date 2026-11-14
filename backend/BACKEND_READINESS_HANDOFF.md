@@ -3,8 +3,9 @@
 Date: 2026-11-14 (Europe/Helsinki).
 Owner: existing backend chat. Branch: `codex/coach-backend-readiness`.
 Base: `0e43cbd74cbae8a5698dd4499abcbb5b093e4b61` (`origin/codex/verda-integration`).
-Status: backend compatibility verified; no implementation fix or API change needed.
-No paid activation or new provider calls during this task.
+Original readiness status: compatibility checks passed before the later independent QA findings.
+Follow-up: QA-01/02/03 are now fixed on this branch; see [QA_FIX_HANDOFF.md](QA_FIX_HANDOFF.md) for scope and 98-test evidence.
+No paid activation or new provider calls during either task.
 
 ## Ownership and integration boundary
 
