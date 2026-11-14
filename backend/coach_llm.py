@@ -9,6 +9,7 @@ from uuid import NAMESPACE_URL, uuid5
 
 from .coach_ledger import GateError
 from .coach_local_state import LocalCoachState
+from .demo_prompts import demo_guidance
 from .coach_tools import TOOLS, clarification_text, expected_selection, facts_for, routing_context, run_tool, sanitize_question, selection
 from .verda import VerdaClient, settings_from_env
 
@@ -84,6 +85,9 @@ class CoachLLM:
                     'request_id': request_id, 'cards': []}
         if scenario:
             return {**response, 'fallback_reason': 'goal_preview'}
+        guidance = demo_guidance(question, customer)
+        if guidance is not None:
+            return {**response, 'kind': 'help', 'text': guidance, 'rows': [], 'fallback_reason': 'demo_guidance'}
         if baseline.get('kind') in {'goals', 'mortgage', 'unknown'}:
             return {**response, 'fallback_reason': 'unsupported_topic' if self.provider else self.reason}
         try:

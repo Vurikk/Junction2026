@@ -278,6 +278,12 @@ def reduce_category(request: Request, customer_id: str, payload: CategoryReducti
         raise HTTPException(404, str(error)) from error
 
 
+@app.get("/api/customers/{customer_id}/coach-demo-prompts")
+def coach_demo_prompts(request: Request, customer_id: str):
+    from .demo_prompts import demo_prompts
+    return demo_prompts(customer_for(request, customer_id))
+
+
 class CoachInput(Model):
     question: str = Field(min_length=1, max_length=500, pattern=r"\S")
     scenario: GoalInput | None = None

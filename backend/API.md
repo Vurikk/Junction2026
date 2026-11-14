@@ -177,3 +177,11 @@ The backend atomically readmits it only if no provider-call record/reservation e
 An admitted duplicate returns `request_in_progress`; a completed duplicate returns its saved response.
 Other failures, completed answers and requests with uncertain billing are never reopened by this rule.
 No automatic retry, new request ID, ledger deletion or schema migration is required.
+
+## Curated demo questions
+
+GET `/api/customers/{id}/coach-demo-prompts` returns `{questions: [{id, label, question}], note}`.
+Dates are drawn from full recorded months; unavailable comparisons/categories are omitted. This GET is local and read-only.
+See [DEMO_PROMPTS_HANDOFF.md](DEMO_PROMPTS_HANDOFF.md) for scope and UI pairing.
+Exact supported broad demo queries receive local `mode=rule_based`, `fallback_reason=demo_guidance`, with no paid call.
+Selecting a dated question uses the existing Coach API, financial tools, request deduplication and spending limits.
