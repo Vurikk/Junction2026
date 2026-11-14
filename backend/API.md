@@ -230,3 +230,17 @@ The guided UI should pin the source month for percentage reruns and never add th
 Goal conversation reuses GET goals and GET goal-analysis. Existing fields and plan formulas are unchanged;
 coach_message now explains funded-within-horizon, conditional repeating-plan feasibility, no capacity and missing confirmations.
 Planned allocation is not saved progress. Completion periods are conditional plan periods, never promised calendar deadlines.
+
+
+### Automatic planning drafts
+GET /api/customers/{id}/planning-defaults?horizon_days=30 (integer1..366) returns read-only draft defaults.
+`balance:{amount_eur,recorded_at,note}` uses latest recorded simultaneous account total; missing, negative,
+future-dated or differently dated account balances stay null. This is historical, not a live bank balance.
+`income:{amount_eur,note}` uses explicit salary/salary_payment averages over the latest up to3full months.
+`bills:{items:[{label,amount_eur}],total_eur,note}` uses separate housing payments, utility payments and grocery purchases.
+Food includes groceries/grocery category purchases only, not restaurants or housing rows with a grocery label.
+Income and each cost average scale by horizon_days/30, then round to cents; total sums rounded cost lines.
+If a component lacks observations its amount and combined total are null, never assumed zero.
+`note` identifies these as historical drafts requiring user review. No assumptions/goals/ledger are changed by GET.
+UI makes recorded balance read-only, lets users edit income and combined costs, and excludes food from remaining everyday costs.
+Only explicit existing plan confirmation saves these drafts as user inputs. Dates/amounts are not future guarantees.

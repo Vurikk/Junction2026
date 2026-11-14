@@ -1,0 +1,54 @@
+"""Editable planning drafts from dated observations, never automatic confirmation."""
+from decimal import Decimal
+
+from .data_coach import complete_windows, in_window, recorded_balances, total_amount
+from .financial import money, spending_rows
+
+
+def planning_defaults(customer, horizon_days=30):
+    windows = complete_windows(customer, 'month')[-3:]
+    balance = recorded_balances(customer)
+    amount = balance['simultaneous_total_eur']
+    if amount is not None and (amount < 0 or any(a['status'] == 'future_dated' for a in balance['accounts'])):
+        amount = None
+    dates = (f"{windows[0].start_time:%d %b %Y} to {windows[-1].end_time:%d %b %Y}"
+             if windows else 'no complete recorded months')
+    rows = customer.get_transactions()
+    salary = rows[(rows.tx_amount_eur > 0) & rows.transaction_type.isin({'salary', 'salary_payment'})]
+    outgoing = spending_rows(customer)
+    groceries = outgoing[(outgoing.transaction_type == 'purchase')
+                         & outgoing.category.fillna('').str.strip().str.casefold().isin({'groceries', 'grocery'})]
+
+    def estimate(selected, sign=-1):
+        groups = [in_window(selected, window) for window in windows]
+        if not groups or not any(len(group) for group in groups):
+            return None
+        average = sum((total_amount(group, sign) for group in groups), Decimal(0)) / len(windows)
+        return float(money(average * Decimal(horizon_days) / 30))
+
+    items = [
+        {'label': 'Housing payments (such as rent)',
+         'amount_eur': estimate(outgoing[outgoing.transaction_type == 'housing_payment'])},
+        {'label': 'Utilities (such as electricity)',
+         'amount_eur': estimate(outgoing[outgoing.transaction_type == 'utilities_payment'])},
+        {'label': 'Food shopping', 'amount_eur': estimate(groceries)},
+    ]
+    total = (float(sum((money(item['amount_eur']) for item in items), Decimal(0)))
+             if all(item['amount_eur'] is not None for item in items) else None)
+    return {
+        'horizon_days': horizon_days,
+        'balance': {'amount_eur': amount, 'recorded_at': balance['total_recorded_at'],
+                    'note': ('Latest recorded balance, not a live balance. Review its date before using this demo plan.'
+                             if amount is not None else 'A usable combined balance is unavailable in the latest account records.')},
+        'income': {'amount_eur': estimate(salary, 1),
+                   'note': (f'Salary average from {dates}, adjusted to {horizon_days} days using a 30-day month. '
+                            'This estimates additional income after the starting balance, not salary already received. '
+                            'Change it to the amount you expect to receive; actual pay dates may differ.')},
+        'bills': {'items': items, 'total_eur': total,
+                  'note': (f'Averages from {dates}, adjusted to {horizon_days} days using a 30-day month. '
+                           'Housing and utilities may include more than rent and electricity. Missing amounts are unknown, not zero. '
+                           'Edit the total for unpaid bills and food you expect, including any other costs. '
+                           'Do not count these costs again under everyday spending.')},
+        'note': ('Suggested starting amounts only. Past records may be incomplete and do not confirm future income or bills. '
+                 'Review and confirm before using them for goal or spending estimates.'),
+    }

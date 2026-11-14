@@ -254,6 +254,12 @@ def compare_spending(request: Request, customer_id: str, period: Literal["week",
     return spending_comparison(customer_for(request, customer_id), period)
 
 
+@app.get("/api/customers/{customer_id}/planning-defaults")
+def suggested_plan_defaults(request: Request, customer_id: str, horizon_days: int = Query(30, ge=1, le=366)):
+    from .planning_defaults import planning_defaults
+    return planning_defaults(customer_for(request, customer_id), horizon_days)
+
+
 @app.get("/api/customers/{customer_id}/planning-suggestions")
 def suggest_planning(request: Request, customer_id: str):
     customer = customer_for(request, customer_id)
