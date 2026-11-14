@@ -2,7 +2,21 @@
 
 import re
 
+from .savings_demo import savings_answer
+
 from .data_coach import category_reduction, complete_windows, period_dates
+
+EVERYDAY_TIPS = {
+    'how can i spend less money on groceries': (
+        'General tips: plan a few meals before shopping, check what you already have, use a list and compare unit prices. '
+        'Choose quantities you can use to avoid waste. Protect enough food for your household and any dietary needs. '
+        'These tips do not estimate your personal savings.'),
+    'how do i stop impulse buying online': (
+        'General tips: put nonessential items on a wish list and pause before checking out. '
+        'Turn off promotional notifications and remove saved payment details if that helps you pause. '
+        'Check your plan before buying; essential purchases should not be delayed. '
+        'These tips do not estimate your personal savings.'),
+}
 
 GUIDE_QUESTIONS = {
     'how can i save money', 'how can i save', 'where can i save money',
@@ -18,6 +32,8 @@ def demo_prompts(customer):
     start = period_dates(windows[-1])['start']
     questions = [{'id': 'overview', 'label': 'Where did my money go?',
                   'question': f'Show spending by category in {start[:7]}'}]
+    questions.append({'id': 'save-most', 'label': 'Where could I save the most?',
+                      'question': f'Where could I save the most in {start[:7]}?'})
     if len(windows) >= 2:
         questions.append({'id': 'comparison', 'label': 'Compare my monthly spending',
                           'question': 'Compare my monthly spending'})
@@ -38,6 +54,11 @@ def demo_prompts(customer):
 def demo_guidance(question, customer):
     # Exact curated intents only. Do not strip names, IDs, amounts or arbitrary suffixes into a permitted question.
     normalized = re.sub(r'\s+', ' ', question.casefold().strip()).rstrip('?.!').strip()
+    if normalized in EVERYDAY_TIPS:
+        return EVERYDAY_TIPS[normalized]
+    savings = savings_answer(normalized, customer)
+    if savings is not None:
+        return savings
     if normalized not in GUIDE_QUESTIONS:
         return None
     prompts = demo_prompts(customer)

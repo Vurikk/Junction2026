@@ -185,3 +185,17 @@ Dates are drawn from full recorded months; unavailable comparisons/categories ar
 See [DEMO_PROMPTS_HANDOFF.md](DEMO_PROMPTS_HANDOFF.md) for scope and UI pairing.
 Exact supported broad demo queries receive local `mode=rule_based`, `fallback_reason=demo_guidance`, with no paid call.
 Selecting a dated question uses the existing Coach API, financial tools, request deduplication and spending limits.
+
+
+### Local savings demo question
+
+The demo prompt list now contains up to four items, including `save-most` with an explicit recorded YYYY-MM.
+POST /api/customers/{id}/coach accepts `Where could I save (the) most?` (also `can`), optionally `in YYYY-MM`.
+Response uses existing kind=help, mode=rule_based, fallback_reason=demo_guidance, text, and empty cards/rows.
+Python ranks hypothetical 10% reductions for restaurant, entertainment and travel purchases in one dated month.
+No date means latest full recorded month; an unavailable explicit month never falls back to another period.
+These are review candidates, not confirmed nonessential costs or a comprehensive savings recommendation.
+No provider call or reservation occurs. Conversation ownership and request deduplication remain enforced.
+Existing goals/allowances/confirmed inputs and prior calculation context remain unchanged.
+Exact grocery-saving and online impulse-buying education questions documented in DEMO_PROMPTS_HANDOFF.md also
+return local general tips through this same response shape. No new financial tool or paid configuration is added.

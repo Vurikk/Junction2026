@@ -9,7 +9,7 @@ GET /api/customers/{id}/coach-demo-prompts returns:
 `{questions: [{id, label, question}], note}`. Unknown demo customers remain 404.
 No provider call, goal/assumption mutation, ledger claim or spending reservation occurs on this GET.
 
-The question list is bounded to three entries:
+The question list is bounded to four entries:
 - overview: category spending in the latest full recorded month, with an explicit YYYY-MM date.
 - comparison: overall monthly comparison, only when at least two full recorded months are available.
 - restaurants: 20% hypothetical reduction in the latest full month with actual restaurant observations.
@@ -44,3 +44,22 @@ empty/partial periods, omitted unavailable options, read-only GET/404 and guidan
 while preserving ownership, replay and conflict checks.
 Final regression result after identity review: **107 tests passed**. No live Coach requests were made by this workstream.
 The running manual backend must be restarted by the user to load this endpoint; source changes do not hot-reload that paid process.
+
+## Savings ranking addition
+
+`Where could I save (the) most?` and `Where can I save (the) most?` now return a local Python ranking.
+Optional `in YYYY-MM` selects that exact recorded month; otherwise the latest full recorded month is named explicitly.
+The new `save-most` demo button submits the dated version. No fallback to older data for missing dates or categories.
+Comparison is fixed at 10% for restaurant, entertainment and travel purchases only, ranked by rounded euro reduction.
+Bill types and all other categories are excluded. This is a bounded set of review candidates, not a claim that these
+costs are unnecessary or that this identifies every possible saving. Ties are named. Coverage remains uncertain.
+No new API fields or provider tools: existing local demo_guidance text/identity/receipt handling is reused.
+No provider call or reservation; prior calculation context stays unchanged. Ranking-specific follow-ups are not supported.
+Two additional exact general-education questions work when typed (case/whitespace/punctuation normalized):
+- How can I spend less money on groceries?
+- How do I stop impulse buying online?
+They return general tips, not personalized amounts. Unknown suffixes are not stripped into a supported question.
+Tests: backend/test_savings_demo.py covers ranking, ties, rounding, excluded essentials/transfers/refunds,
+missing/partial months, privacy, nonmutation, guidance, deduplication and browser ownership with disposable ledgers.
+
+Verification: 113 backend tests pass with COACH_LLM_ENABLED=false and SBANK_DATA_DIR pointing to the existing dataset folder. Frontend demo checks pass; UI commit afcc79e. No live questions or paid calls.

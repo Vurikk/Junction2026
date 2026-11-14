@@ -31,7 +31,7 @@ class DemoPromptTests(unittest.TestCase):
         before = customer._transactions.copy(deep=True)
         result = demo_prompts(customer)
         prompts = {item['id']: item for item in result['questions']}
-        self.assertEqual(set(prompts), {'overview', 'comparison', 'restaurants'})
+        self.assertEqual(set(prompts), {'overview', 'save-most', 'comparison', 'restaurants'})
         self.assertTrue(result['note'])
         for item in prompts.values():
             self.assertEqual(set(item), {'id', 'label', 'question'})
@@ -82,7 +82,7 @@ class DemoPromptTests(unittest.TestCase):
             ('2024-04-30', 'transfer', 0, 'transfer', 'one', 0),
         ])
         result = demo_prompts(customer)
-        self.assertEqual([item['id'] for item in result['questions']], ['overview'])
+        self.assertEqual([item['id'] for item in result['questions']], ['overview', 'save-most'])
         self.assertEqual(self.calculate(customer, result['questions'][0]['question'])['data']['spending_eur'], 20)
 
     def test_get_prompts_is_read_only_and_unknown_customer_is_404(self):
