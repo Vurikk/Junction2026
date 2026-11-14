@@ -198,3 +198,86 @@ Prior authorized live smoke at `0e43cbd`: CUST04457, restaurants, July 2026, 20%
 95.04 / 76.03 / 19.01 EUR. This remains supplied historical evidence; no live smoke was repeated.
 The matching amounts above were independently recalculated locally by Python with the provider absent.
 No merges, paid activation or changes outside this QA handoff were made by this pass.
+
+## Follow-up: guided savings and goal analysis
+
+Date: 14 November 2026. Reassigned read-only backend verification by the coordinating chat.
+Scope: working tree `verda-live-smoke/Junction2026` on `codex/coach-backend-readiness`, base `0c71d8a`,
+including the new savings-opportunities endpoint and expanded goal explanation. UI was intentionally not inspected while in flight.
+
+**Result: PASS for the bounded checks below; no concrete bug reproduced.**
+These checks apply to the observed working-source blobs, not an unobserved deployment:
+
+| File | Git blob verified before and after independent probes |
+| --- | --- |
+| backend/savings_demo.py | aea1f727ec0f8ab150fca726f334897c7b1d5a3d |
+| backend/main.py | ae8d5e928c297020614d948ba67ae07ac85df157 |
+| backend/coach.py | 61bfc2180df7fb62ea67f6e1776fac0d8f2db7f4 |
+
+### Independent HTTP probes
+
+Used a new in-process FastAPI TestClient with `load_customers` patched to synthetic fixtures.
+Paid mode was explicitly false, `app.state.coach_llm.provider` was None, and both `Ledger.transaction`
+and `VerdaClient.complete` were patched to raise if touched. Neither guard fired.
+No existing server, external dataset, raw customer output, credential or actual ledger was accessed.
+Fixture goals/assumptions were assigned only within the disposable TestClient state to exercise analysis;
+there were no writes to an existing application or source files.
+
+Savings fixture: coverage from 2024-04-01 through partial May (2024-05-15).
+April purchases: restaurants EUR 100, entertainment EUR 50, travel EUR 200.
+Additional exclusion sentinels included housing payments labelled Restaurants, utilities payments labelled Travel,
+negative transfers, positive and negative refunds, unknown/null categories, groceries and positive purchases.
+These excluded entries deliberately had much larger amounts than the included purchases.
+
+Expected versus actual (all matched):
+
+- GET savings-opportunities with explicit April and 10% returned only travel/restaurants/entertainment,
+  with reductions EUR 20/10/5 and baselines EUR 200/100/50; none of the sentinel amounts entered the totals.
+- 0%, 20%, 33.33% and 100% reruns retained 2024-04-01 through 2024-04-30 and matched Decimal rounding.
+  At 33.33%, reductions were EUR 66.66/33.33/16.66; at 100%, all hypothetical amounts were zero.
+- Omitting month selected April, the latest full recorded month, rather than partial May.
+- Explicit May, January 2023 and October 2026 returned `unavailable_period`, null source period and empty candidates.
+  No older month was substituted.
+- Empty and partial-only histories returned unavailable_period. A full April containing only groceries returned
+  `no_candidates` with April dates, keeping absence of eligible observations distinct from an unavailable period.
+- Months `2024-13`, `2024-00`, `2024-4`, `last month`, `2024-04-01` and the empty string returned 422.
+  Percentages -1, 101, NaN, Infinity, 10.001 and abc returned 422. Unknown customer returned 404.
+- Deep comparison confirmed all savings GETs left goals and assumptions unchanged;
+  pandas frame equality confirmed transactions were unchanged.
+
+Goal-analysis fixture deliberately inserted flexible before critical and important goals (EUR 200 each).
+Six missing planning inputs produced insufficient data, null capacity/allocations/completion times,
+and wording that feasibility cannot yet be determined.
+With EUR 1000 accessible funds, zero additional income, EUR 400 bills, EUR 200 reserve,
+EUR 100 everyday costs and EUR 300 voluntary contribution, a 30-day plan allocated
+critical/important/flexible EUR 200/100/0, independent of insertion order.
+
+- repeat_plan=false: completion periods all null; only the fully funded critical target was described as fitting.
+- repeat_plan=true: completion periods 1/2/2; unfunded targets were explicitly conditional on repeated contribution/capacity.
+- Reducing accessible funds to EUR 100 produced EUR 500 shortfall, zero allocations, no completion periods,
+  and no conditional-completion promise despite repeat_plan=true.
+- Text states saved progress is unknown and historical cuts have not been added to capacity.
+  GET goal-analysis left the seeded goals and confirmed assumptions unchanged in both repeat configurations.
+
+### Existing regression checks independently rerun
+
+With paid mode false and bytecode writes disabled:
+
+```text
+python -B -m unittest backend.test_guided_coach backend.test_savings_demo backend.test_coach backend.test_financial
+```
+
+**22 tests passed**, 0.444 seconds reported by unittest. The savings identity test uses a disposable temporary ledger,
+mock provider and zero spending/call assertions; it never accesses the deployment ledger.
+These checks additionally cover ties, tiny amounts, sensitive suffixes, no-goal copy and zero contribution/capacity.
+The installed Starlette/httpx deprecation warning remains non-failing.
+
+To reproduce the independent HTTP checks, patch load_customers with the fixture described above, construct TestClient(app),
+and GET `/api/customers/{fixture_id}/savings-opportunities?month=2024-04&reduction_percent=10`.
+Repeat the listed month/percentage variants and compare state before/after. Seed the stated goal/assumption values
+in that client's disposable app.state, then GET `/goal-analysis` for each repeat/shortfall case.
+Keep the provider/ledger failure guards active throughout.
+
+Not tested in this follow-up: in-flight UI changes, actual guided-dialogue clicks/layout, production routing,
+real datasets, paid-provider behavior, or a full-suite/build rerun. No claim is made for those cases.
+No implementation, existing tests, configuration, datasets or shared server processes were modified by QA.
