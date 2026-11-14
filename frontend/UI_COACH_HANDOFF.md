@@ -155,3 +155,17 @@ The new endpoint is owned by backend branch `codex/coach-backend-readiness`; see
 The existing manual backend on 8031 needs a USER restart to load that endpoint. This task did not contact or restart it.
 The existing frontend on 5193 points at this checkout and may hot-reload source changes; it was not started/restarted here.
 No live provider requests, paid activation, synthetic goal writes, merges, or deployment were performed.
+
+## Guided conversations and spending-plan scroll fix
+
+Guided UI implementation: 95817ad. Backend pairing: codex/coach-backend-readiness at 2cc7d04.
+Savings choices use the read-only savings-opportunities endpoint; Python supplies dated candidate amounts and 10/20% scenarios.
+Goal dialogues use existing goals/goal-analysis, with unknown inputs and conditional repeated plans shown explicitly.
+Guided actions do not call Verda or modify financial inputs. Goal creation still requires confirmation.
+Exact supported typed starters enter the guided flow; arbitrary free text retains the existing constrained Coach route.
+Planning-form money fields, chart targets and horizon now blur on mouse-wheel input so scrolling cannot step the values.
+Typing, keyboard editing and ordinary page scrolling remain available. No broad UI checks were repeated for this fix.
+Verification: guided transport/render checks and production build pass. Existing large-bundle warning remains.
+UI agent reported prior mock-browser checks of flow, retry/customer isolation and mobile layout; root did not complete full
+integrated browser verification after the user asked to stop extra UI checks. No paid requests were sent.
+Local isolated preview: http://127.0.0.1:5194 with disabled backend8032. Existing servers were left untouched.

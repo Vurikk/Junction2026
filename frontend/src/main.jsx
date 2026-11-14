@@ -48,11 +48,11 @@ function PlanningForm({ assumptions, suggestions, busy, onSave }) {
       <details className="advanced"><summary>Advanced: period, repeating plan and chart targets</summary>
       <label htmlFor="horizon_days">Planning period (days)</label>
       <input id="horizon_days" name="horizon_days" type="number" min="1" max="366" step="1"
-        defaultValue={assumptions.horizon_days} required />
+        onWheel={event => event.currentTarget.blur()} defaultValue={assumptions.horizon_days} required />
       {planningFields.slice(6).map(([key, label]) => <React.Fragment key={key}>
         <label htmlFor={key}>{label} (€)</label>
         <input id={key} name={key} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
-          defaultValue={assumptions[key] ?? ''} placeholder="Unknown" />
+          onWheel={event => event.currentTarget.blur()} defaultValue={assumptions[key] ?? ''} placeholder="Unknown" />
       </React.Fragment>)}
       <label className="check"><input name="repeat_plan" type="checkbox" defaultChecked={assumptions.repeat_plan} />
         I confirm the same savings capacity will be available in each future planning period.</label></details>
@@ -60,7 +60,7 @@ function PlanningForm({ assumptions, suggestions, busy, onSave }) {
       {planningFields.slice(0, 6).map(([key, label]) => <React.Fragment key={key}>
         <label htmlFor={key}>{label} (EUR)</label>
         <input id={key} name={key} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
-          defaultValue={assumptions[key] ?? ''} placeholder="I don't know" />
+          onWheel={event => event.currentTarget.blur()} defaultValue={assumptions[key] ?? ''} placeholder="I don't know" />
       </React.Fragment>)}
       <label className="check"><input type="checkbox" required />
         I confirm these inputs and that essential bills can be paid before spending.</label>
