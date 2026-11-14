@@ -31,6 +31,19 @@ class PlanningDefaultsTests(unittest.TestCase):
             self.assertEqual(result['bills']['total_eur'], bills)
             self.assertEqual(len(result['bills']['items']), 3)
 
+    def test_reserve_and_remaining_spending_are_independent_of_bills_and_horizon(self):
+        result = planning_defaults(sample(), 30)
+        self.assertEqual(result['everyday']['amount_eur'], 100)
+        self.assertEqual(result['everyday']['daily_average_eur'], 3.33)
+        self.assertEqual(result['reserve']['monthly_expenses_eur'], 1400)
+        self.assertEqual(result['reserve']['options'][2], {'months': 3, 'amount_eur': 4200, 'exceeds_balance': True})
+        self.assertEqual(result['reserve']['options'][0]['exceeds_balance'], False)
+        self.assertEqual(result['reserve']['options'][11]['amount_eur'], 16800)
+        longer = planning_defaults(sample(), 60)
+        self.assertEqual(longer['everyday']['amount_eur'], 200)
+        self.assertEqual(longer['reserve'], result['reserve'])
+        self.assertEqual(result['bills']['total_eur'] + result['everyday']['amount_eur'], 1400)
+
     def test_missing_values_and_mixed_account_dates_stay_unknown(self):
         customer = sample()
         customer._transactions.loc[customer._transactions.transaction_type == 'utilities_payment', 'transaction_type'] = 'unknown'

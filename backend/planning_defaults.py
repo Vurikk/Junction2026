@@ -35,7 +35,30 @@ def planning_defaults(customer, horizon_days=30):
     ]
     total = (float(sum((money(item['amount_eur']) for item in items), Decimal(0)))
              if all(item['amount_eur'] is not None for item in items) else None)
+    monthly_groups = [in_window(outgoing, window) for window in windows]
+    monthly = (sum((total_amount(group) for group in monthly_groups), Decimal(0)) / len(windows)
+               if windows and any(len(group) for group in monthly_groups) else None)
+    # Remove the exact rows included in housing, utilities and food, not a second rounded monetary deduction.
+    other = outgoing[(outgoing.transaction_type == 'purchase') & ~outgoing.index.isin(groceries.index)]
+    other_groups = [in_window(other, window) for window in windows]
+    other_monthly = (sum((total_amount(group) for group in other_groups), Decimal(0)) / len(windows)
+                     if monthly is not None else None)
+    reserve_options = []
+    for months in range(1, 13):
+        target = money(monthly * months) if monthly is not None else None
+        reserve_options.append({'months': months, 'amount_eur': float(target) if target is not None else None,
+                                'exceeds_balance': target > money(amount) if target is not None and amount is not None else None})
     return {
+        'everyday': {'amount_eur': float(money(other_monthly * horizon_days / 30)) if other_monthly is not None else None,
+                     'daily_average_eur': float(money(other_monthly / 30)) if other_monthly is not None else None,
+                     'note': ('Average remaining purchases after excluding housing, utilities and food already listed above. '
+                              'Uses a 30-day month; the plan total is calculated before rounding the displayed daily average. '
+                              'If your edited bills total includes other daily costs, remove those from this amount too.')},
+        'reserve': {'monthly_expenses_eur': float(money(monthly)) if monthly is not None else None,
+                    'default_months': 3, 'options': reserve_options,
+                    'note': ('Start with 3 months of average expenses, within your chosen 2–4 month range. '
+                             'Choose 1–12 months or enter your own amount. This is a suggested target, not money already saved. '
+                             'If it exceeds your balance, build towards it or choose an amount you can protect now.')},
         'horizon_days': horizon_days,
         'balance': {'amount_eur': amount, 'recorded_at': balance['total_recorded_at'],
                     'note': ('Latest recorded balance, not a live balance. Review its date before using this demo plan.'

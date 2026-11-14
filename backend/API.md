@@ -244,3 +244,5 @@ If a component lacks observations its amount and combined total are null, never 
 `note` identifies these as historical drafts requiring user review. No assumptions/goals/ledger are changed by GET.
 UI makes recorded balance read-only, lets users edit income and combined costs, and excludes food from remaining everyday costs.
 Only explicit existing plan confirmation saves these drafts as user inputs. Dates/amounts are not future guarantees.
+
+Planning defaults now also return everyday.amount_eur and daily_average_eur (remaining purchase rows excluding the food/housing/utilities groups) and reserve.monthly_expenses_eur, default_months=3, and options for 1..12 months with amount_eur/exceeds_balance. Reserve targets use total average recorded expenses and are independent of plan length. No reserve is capped to the balance or claimed already saved. UI starts calculated fields afresh, retains only current-form edits, and leaves goal contribution blank for user choice.
