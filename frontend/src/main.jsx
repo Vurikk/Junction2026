@@ -98,6 +98,16 @@ function App() {
     });
     return () => controller.abort();
   }, [customer, period, reload]);
+  useEffect(() => {
+    if (!customer) return;
+    const controller = new AbortController();
+    api(`customers/${customer}/coach`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+      body: JSON.stringify({ question: 'Spending vs historical average' }),
+    }).then(result => setData(old => ({ ...old, coachOverview: result.text })))
+      .catch(() => { /* Keep the unavailable overview fallback without blocking other sections. */ });
+    return () => controller.abort();
+  }, [customer, period, reload]);
   async function createGoal(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -146,34 +156,34 @@ function App() {
           setData({}); setAnalysis(null); setGoalNotice(''); setCustomer(e.target.value);
         }}><option value="" disabled>Select customer</option>
           {customers.map(item => <option key={item.customer_id}>{item.customer_id}</option>)}</select></div>
-      <div className="heading"><h1>{{ Home: 'Your money, made clearer',
-        Spending: 'Your spending', Goals: 'Your goals', Coach: 'Ask your coach' }[page]}</h1></div>
+      {page !== 'Home' && <div className="heading"><h1>{{ Home: 'Your money, made clearer',
+        Spending: 'Your spending', Goals: 'Your goals', Coach: 'Ask your coach' }[page]}</h1></div>}
       {error && <div className="error" role="alert">{error}<button disabled={busy} onClick={() => setReload(reload + 1)}>Try again</button></div>}
       {!customer && !error && <p role="status">Loading your profiles…</p>}
       {page === 'Home' && <>
-        <section className="spending-hero"><p>Recorded spending {spending?.month ? ' / ' + spending.month : ''}</p>
-          <strong className="amount">{money(spending?.spending_eur)}</strong>
-          <p className="fine">Historical demo data / Transfers excluded</p>
-          <button className="text-button" onClick={() => setPage('Spending')}>See where it went <span aria-hidden="true">&rsaquo;</span></button>
-        </section>
-        <h2 className="section-label">Understand your spending</h2>
-        <button className="journey-link" onClick={() => openCoach('Spending by category')}>
-          <Icon name="Coach" /><span><b>Let's look at it together</b><small>Explore your spending by category</small></span><span>&rsaquo;</span>
-        </button>
-        <button className="journey-link" onClick={() => openCoach('Spending vs historical average')}>
-          <Icon name="Spending" /><span><b>Is this usual for me?</b><small>Compare with your recorded history</small></span><span>&rsaquo;</span>
-        </button>
-        <h2 className="section-label">Looking ahead</h2>
-        <section><div className="section-title"><h2>Your spending room</h2><span className="tag">Estimate</span></div>
-          <div className="metrics"><div><small>Per day</small><strong>{money(data.budget?.daily_eur)}</strong></div>
-            <div><small>Per week</small><strong>{money(data.budget?.weekly_eur)}</strong></div></div>
-          <p>{data.budget?.status === 'estimated'
-            ? `Based on your confirmed ${data.budget.assumptions.horizon_days}-day plan. Includes planned everyday costs.`
-            : 'Not available yet. You can confirm missing amounts in the optional spending plan.'}</p>
-          {data.budget?.shortfall_eur > 0 && <p role="alert">Bills and reserve shortfall: {money(data.budget.shortfall_eur)}</p>}
-          <p className="fine">Estimates depend on your inputs and do not model payment timing.</p></section>
-        <button className="journey-link" onClick={() => setPage('Goals')}><Icon name="Goals" />
-          <span><b>Something to save for?</b><small>Optional goals, at your own pace</small></span><span>&rsaquo;</span></button>
+        <div className="home-overview">
+          <section className="home-balance"><h1>Balance</h1><strong>Not available</strong>
+            <p>Current bank balance is not supplied by this demo.</p></section>
+          <section className="home-coach"><h2>Financial coach overview</h2>
+            <p>{data.coachOverview || 'A historical comparison is not available yet. You can still explore recorded spending.'}</p>
+            <button className="text-button" onClick={() => openCoach('Spending vs historical average')}>Ask Coach</button>
+            <p className="fine">Rule-based explanation of recorded history.</p></section>
+          <section className="home-allowance"><h2>Estimated safe to spend</h2>
+            <p className="allowance-line">Per day <strong>{money(data.budget?.daily_eur)}</strong></p>
+            <p className="allowance-line">Per week <strong>{money(data.budget?.weekly_eur)}</strong></p>
+            <p className="fine">{data.budget?.status === 'estimated'
+              ? `Based on your confirmed ${data.budget.assumptions.horizon_days}-day plan.`
+              : 'Confirm missing amounts in the optional spending plan for an estimate.'}
+              {' '}Includes everyday costs; payment timing is not modeled.</p>
+            {data.budget?.shortfall_eur > 0 &&
+              <p role="alert">Bills and reserve shortfall: {money(data.budget.shortfall_eur)}</p>}
+          </section>
+          <div className="home-spending-link">
+            {spending?.month && <p className="fine">Recorded spending in {spending.month}: {money(spending.spending_eur)}</p>}
+            <button className="text-button" onClick={() => setPage('Spending')}>See where it went &rsaquo;</button>
+          </div>
+        </div>
+        <button className="home-goals text-button" onClick={() => setPage('Goals')}>Goals (optional) &rsaquo;</button>
         {data.assumptions && <PlanningForm key={`${customer}-${reload}`} assumptions={data.assumptions}
           busy={busy} onSave={savePlan} />}
         <details className="supporting"><summary>Account and mortgage information</summary><section>

@@ -1,5 +1,29 @@
 # S-mobiili-inspired coaching UI
 
+## Follow-up: simplified Home (14 November 2026)
+
+Supersedes the original Home mapping below. Home now presents one vertical surface:
+Balance / Not available, Financial coach overview, text-only estimated day/week allowance,
+then the Spending link. Goals are a secondary text action. Existing planning disclosures remain.
+The balance is never sourced from spending or available funds. Coach overview uses the existing
+read-only Coach POST with `Spending vs historical average`; its dated response is shown verbatim.
+Missing comparison data gets a brief unavailable fallback. No new backend contract or calculations.
+
+Follow-up verification: production build and diff check passed. Both customers showed their own
+dated comparison, unavailable bank balance and unavailable allowances. Checked actual CSS widths
+360/390 (scroll widths 345/375) without overflow. Replaced Home screenshots with these captures.
+Home Ask Coach prefilled the comparison question and submission returned the backend explanation.
+Created a Flexible test goal before planning and observed saved success. Home Spending link opened
+the existing bar chart. The transient comparison fallback was observed during customer loading.
+The test goal `UI follow-up test` remains only in the currently running local backend's memory.
+Preview confirmation/advanced-field preservation were verified in the earlier pass below and were
+not rerun for this Home-only follow-up. No physical-device or comparison-only failure injection.
+
+Backend blockers: bank balance needs a contract with amount, currency, timestamp and clear current
+versus historical semantics. Conversational budget planning, confirmed historical rent/food suggestions,
+and category-reduction scenarios remain unsupported; no wizard or negotiation controls were added.
+The existing Coach comparison supports Home today; a dedicated summary endpoint is optional.
+
 Branch: `codex/s-mobiili-ui`. Base: `main` at `65e4e80`.
 Implemented 14 November 2026. No backend edits, dependencies, main merge or deployment.
 
