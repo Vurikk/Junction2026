@@ -20,6 +20,13 @@ class Model(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class GuidedQuestion(Model):
+    action: Literal['overview', 'savings', 'goals', 'comparison', 'allowance', 'tips']
+    percent: Literal[10, 20] = 10
+    month: str | None = Field(None, pattern=r'^\d{4}-(0[1-9]|1[0-2])$')
+    category: Literal['restaurants', 'entertainment', 'travel'] | None = None
+
+
 class CustomerSummary(Model):
     customer_id: str
     customer_age: int | None
@@ -117,6 +124,12 @@ def customer_for(request, customer_id):
     if customer is None:
         raise HTTPException(404, "Unknown demo customer")
     return customer
+
+
+@app.post('/api/customers/{customer_id}/guided-coach')
+def guided_coach(request: Request, customer_id: str, payload: GuidedQuestion):
+    from .guided_demo import answer
+    return answer(customer_for(request, customer_id), request.app.state.goals[customer_id], **payload.model_dump())
 
 
 @app.get("/api/health")

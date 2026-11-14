@@ -1,5 +1,13 @@
 # Financial engine API extensions
 
+## Scripted Coach (no LLM)
+
+POST `/api/customers/{id}/guided-coach` accepts action: overview, savings, goals, comparison, allowance or tips.
+Optional percent is10 or20 (default10), month is YYYY-MM, category is restaurants, entertainment or travel.
+Returns mode=guided, text, source_period, rows, note and follow-up actions. All financial math runs in Python.
+This read-only route never calls the LLM path or changes goals, assumptions or usage ledgers.
+Goal timings are conditional on repeating the historical monthly allocation with no known saved progress.
+
 Existing customer, spending and mortgage routes retain their fields and semantics.
 Optional Verda support is disabled/gated by default. Goals and confirmed inputs remain per-customer, in memory, reset on restart.
 

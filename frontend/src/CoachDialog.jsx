@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 export default function CoachDialog({ open, onClose, children }) {
   const dialog = useRef(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   useEffect(() => {
     if (!open) return;
     const node = dialog.current;

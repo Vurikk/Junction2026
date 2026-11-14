@@ -1,168 +1,83 @@
 import React, { useEffect, useRef, useState } from 'react';
-import CategoryReduction from './CategoryReduction';
-import CoachResult from './CoachResult';
-import { createCoachSession, coachModeLabel, fallbackNotice } from './coachSession';
 
-export default function Coach({ customer, api, money, onSaved, initialQuestion = '', open = true }) {
+const questions = [
+  { action: 'savings', label: 'What could I save most on?', icon: '↘' },
+  { action: 'overview', label: 'Where did my money go?', icon: '≡' },
+  { action: 'goals', label: 'Analyze my goals', icon: '◎' },
+  { action: 'comparison', label: 'Am I spending more than usual?', icon: '↔' },
+  { action: 'allowance', label: 'What extra could I spend?', icon: '€' },
+  { action: 'tips', label: 'Everyday saving tips', icon: '✦' },
+];
+
+export default function Coach({ customer, api, money, open = true }) {
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(null);
-  const [question, setQuestion] = useState(initialQuestion);
-  const [preview, setPreview] = useState(null);
-  const [draft, setDraft] = useState({ name: '', amount_eur: '', priority: 'flexible' });
   const pending = useRef(null);
-  const session = useRef(null);
-  if (!session.current || session.current.customer !== customer) {
-    session.current = { customer, client: createCoachSession(api, customer) };
-  }
-  const mounted = useRef(false);
   const log = useRef(null);
-  const composer = useRef(null);
+  const profile = useRef(customer);
   useEffect(() => {
-    if (open && initialQuestion) setQuestion(current => current || initialQuestion);
-  }, [initialQuestion, open]);
-  useEffect(() => {
-    mounted.current = true;
-    return () => { mounted.current = false; pending.current?.abort(); };
+    profile.current = customer;
+    pending.current?.abort(); pending.current = null;
+    setMessages([]); setError(''); setRetry(null); setBusy(false);
+    return () => pending.current?.abort();
   }, [customer]);
   useEffect(() => {
-    if (log.current) log.current.scrollTop = log.current.scrollHeight;
-  }, [messages, busy, error]);
-  useEffect(() => {
-    const keepComposerVisible = () => {
-      if (composer.current?.contains(document.activeElement)) composer.current.scrollIntoView({ block: 'nearest' });
-    };
-    window.visualViewport?.addEventListener('resize', keepComposerVisible);
-    return () => window.visualViewport?.removeEventListener('resize', keepComposerVisible);
-  }, []);
+    if (open && log.current) log.current.scrollTop = log.current.lastElementChild?.offsetTop || 0;
+  }, [messages, busy, error, open]);
 
-  function startTool(tool, text) {
+  async function ask(choice, replay = false) {
     if (pending.current) return;
-    setPreview(null); setError(''); setRetry(null);
-    setMessages(old => [...old.filter(item => !item.tool), { text, user: true }, { tool }]);
-  }
-  async function ask(text, scenario, userText = text, retryTurn = null) {
-    if (pending.current || !text.trim()) return;
     const controller = new AbortController();
-    pending.current = controller;
-    setBusy(true); setError(''); setRetry(null); setPreview(null);
-    const turn = retryTurn || session.current.client.turn(text, scenario || null);
-    if (!retryTurn) setMessages(old => [...old, { text: userText, user: true }]);
+    const requestedProfile = customer;
+    pending.current = controller; setBusy(true); setError(''); setRetry(null);
+    if (!replay) setMessages(old => [...old, { user: true, text: choice.label }]);
+    const { action, percent, month, category } = choice;
     try {
-      const result = await session.current.client.send(turn, controller.signal);
-      if (!mounted.current || controller.signal.aborted) return;
-      const answer = { ...result, turnId: turn.request_id };
-      setMessages(old => {
-        const previous = old.filter(item => item.turnId !== turn.request_id);
-        return result.kind === 'scenario' && !result.preview && !result.cards?.length && /\bgoal\b/i.test(text)
-          ? [...previous.filter(item => !item.tool), answer, { tool: 'goal' }] : [...previous, answer];
-      });
-      if (['request_in_progress', 'rate_limited', 'concurrency_limit'].includes(result.fallback_reason)) {
-        setError(fallbackNotice(result.fallback_reason)); setRetry({ text, scenario, userText, turn });
-      }
-      setPreview(result.preview || null);
-    } catch (e) {
-      if (!mounted.current || controller.signal.aborted) return;
-      setError(e.message); setRetry({ text, scenario, userText, turn });
-    } finally {
-      if (mounted.current && pending.current === controller) { pending.current = null; setBusy(false); }
-    }
-  }
-  async function confirm() {
-    if (pending.current || !preview) return;
-    const controller = new AbortController();
-    pending.current = controller;
-    setBusy(true); setError(''); setRetry(null);
-    try {
-      await api(`customers/${customer}/goals`, {
+      const result = await api(`customers/${customer}/guided-coach`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
-        body: JSON.stringify(preview),
+        body: JSON.stringify({ action, ...(percent ? { percent } : {}), ...(month ? { month } : {}),
+          ...(category ? { category } : {}) }),
       });
-      if (!mounted.current || controller.signal.aborted) return;
-      setPreview(null); onSaved();
-      setMessages(old => [...old.filter(item => !item.tool), { text: 'Goal saved.' }]);
-      try {
-        const analysis = await api(`customers/${customer}/goal-analysis`, { signal: controller.signal });
-        if (mounted.current && !controller.signal.aborted) setMessages(old => [...old, { text: analysis.coach_message }]);
-      } catch {
-        if (mounted.current && !controller.signal.aborted) {
-          setMessages(old => [...old, { text: 'Your goal is saved. Its explanation is unavailable right now.' }]);
-        }
-      }
-    } catch (e) {
-      if (mounted.current && !controller.signal.aborted) {
-        setPreview(null); setError(`${e.message} Check Goals before trying to create it again.`);
+      if (!controller.signal.aborted && profile.current === requestedProfile) setMessages(old => [...old, result]);
+    } catch {
+      if (!controller.signal.aborted && profile.current === requestedProfile) {
+        setError('Could not load that calculation. Please try again.'); setRetry(choice);
       }
     } finally {
-      if (mounted.current && pending.current === controller) { pending.current = null; setBusy(false); }
+      if (pending.current === controller) { pending.current = null; setBusy(false); }
     }
   }
-  function editDraft(key, value) {
-    setPreview(null); setRetry(null);
-    setDraft(old => ({ ...old, [key]: value }));
-  }
-  return <section className="coach coach-conversation" aria-label="Financial coach conversation">
-    <div className="starting-actions">
-      <button disabled={busy} onClick={() => ask('Spending by category', null, 'Understand spending')}>Understand spending</button>
-      <button disabled={busy} onClick={() => startTool('savings', 'Explore savings')}>Explore savings</button>
-      <button disabled={busy} onClick={() => ask('Goal progress', null, 'My goals')}>My goals</button>
-    </div>
+  return <section className="coach coach-conversation guided-coach" aria-label="Guided financial coach">
+    <div className="guided-badge">Guided demo · Calculated from your data</div>
     <div className="conversation-log" ref={log} role="log" aria-label="Conversation" aria-live="polite" tabIndex={0}>
-      {messages.length === 0 && <p className="conversation-empty">What would you like to explore?</p>}
+      <article className="chat coach-welcome"><small>Coach</small>
+        <h3>Let's make sense of your money.</h3>
+        <p>Pick a question. I'll use your recorded spending and goals to explain the numbers.</p>
+      </article>
       {messages.map((item, index) => <article className={item.user ? 'chat user' : 'chat'} key={index}>
-        <small>{item.user ? 'You' : item.tool ? 'Coach' : coachModeLabel(item)}</small>
-        {item.tool === 'savings' ? <CategoryReduction customer={customer} api={api} money={money} />
-          : item.tool === 'goal' ? <form onSubmit={event => {
-            event.preventDefault(); ask('Preview this goal', draft);
-          }}><fieldset disabled={busy}><legend>Try a goal</legend>
-            <label htmlFor="preview-name">Name</label><input id="preview-name" value={draft.name} required maxLength={100}
-              onChange={event => editDraft('name', event.target.value)} />
-            <label htmlFor="preview-amount">Amount (EUR)</label>
-            <input id="preview-amount" type="number" min="0.01" max="9999999999.99" step="0.01" required
-              value={draft.amount_eur} onChange={event => editDraft('amount_eur', event.target.value)} />
-            <label htmlFor="preview-priority">Priority</label>
-            <select id="preview-priority" value={draft.priority} onChange={event => editDraft('priority', event.target.value)}>
-              <option value="flexible">Flexible</option><option value="important">Important</option><option value="critical">Critical</option>
-            </select><button className="primary" disabled={busy}>Preview without saving</button>
-          </fieldset></form> : <>
-            <p>{item.text}</p>
-            {fallbackNotice(item.fallback_reason) && <p className="fine">{fallbackNotice(item.fallback_reason)}</p>}
-            {item.cards?.map((card, cardIndex) => <CoachResult key={cardIndex} card={card} money={money} />)}
-            {item.analysis && <div className="conversation-result">
-              <div className="row"><span>Current daily estimate</span><b>{money(item.baseline.daily_eur)}</b></div>
-              <div className="row"><span>With this goal</span><b>{money(item.analysis.daily_eur)}</b></div>
-              <p className="fine">Hypothetical goal · not saved yet</p>
-              <details><summary>Plan details</summary>
-                <p>Weekly estimate: {money(item.baseline.weekly_eur)} → {money(item.analysis.weekly_eur)}.</p>
-                <p>Uses confirmed planning inputs; actual saved progress is unknown.</p>
-              </details>
-            </div>}
-            {item.rows?.map(row => <div className="row" key={row.label}><span>{row.label}</span><b>{money(row.value)}</b></div>)}
-            {item.kind === 'categories' && <div className="context-actions">
-              <button disabled={busy} onClick={() => ask('Spending vs historical average')}>Compare with usual</button>
-              <button disabled={busy} onClick={() => ask('Daily and weekly allowance')}>Check safe spending</button>
-            </div>}
-            {item.kind === 'goals' && <button disabled={busy}
-              onClick={() => startTool('goal', 'Try adding a goal')}>Preview a new goal</button>}
-          </>}
+        <small>{item.user ? 'You' : 'Coach'}</small>
+        <p>{item.text}</p>
+        {item.source_period && <p className="guided-period">Recorded {item.source_period.start} – {item.source_period.end}</p>}
+        {item.rows?.map((row, i) => <div className="guided-result" key={i}>
+          <div className="row"><span>{row.label}</span><strong>{money(row.value)}</strong></div>
+          {row.detail && <p className="fine">{row.detail}</p>}
+        </div>)}
+        {item.tips && <ul>{item.tips.map((tip, i) => <li key={i}>{tip}</li>)}</ul>}
+        {item.note && <details className="guided-note"><summary>About these numbers</summary><p>{item.note}</p></details>}
+        {item.actions?.length > 0 && <div className="context-actions">
+          {item.actions.map((choice, i) => <button key={i} disabled={busy} onClick={() => ask(choice)}>{choice.label}</button>)}
+        </div>}
       </article>)}
-      {preview && <div className="chat confirmation"><p>Create {preview.name}, {money(preview.amount_eur)}, {preview.priority}?</p>
-        <button className="primary" disabled={busy} onClick={confirm}>Confirm and create goal</button>
-        <button disabled={busy} onClick={() => setPreview(null)}>Discard preview</button></div>}
-      {busy && <p role="status" className="checking">Checking your recorded information…</p>}
-      {error && <div className="error" role="alert"><p>{error}</p>
-        {retry && <button disabled={busy}
-          onClick={() => ask(retry.text, retry.scenario, retry.userText, retry.turn)}>Retry answer</button>}</div>}
+      {busy && <p role="status">Calculating from your recorded data…</p>}
+      {error && <div role="alert" className="error"><p>{error}</p>
+        <button disabled={busy} onClick={() => ask(retry, true)}>Try again</button></div>}
     </div>
-    <form className="chat-composer" ref={composer} onSubmit={event => {
-      event.preventDefault(); ask(question); setQuestion('');
-    }}>
-      <label htmlFor="question">Message Coach</label>
-      <div><input id="question" value={question} onChange={event => setQuestion(event.target.value)} required maxLength={500}
-        placeholder="Spending, averages or allowances" disabled={busy} autoComplete="off" />
-        <button className="primary" disabled={busy || !question.trim()} aria-label="Send message">Send</button></div>
-      <small>Follow-ups use this profile’s conversation. Guided previews never change your plan.</small>
-    </form>
+    <div className="guided-questions" aria-label="Choose a question">
+      {questions.map(choice => <button key={choice.action} disabled={busy} onClick={() => ask(choice)}>
+        <span aria-hidden="true">{choice.icon}</span>{choice.label}</button>)}
+    </div>
+    <p className="guided-footer">Preset questions. Real recorded figures. Nothing is saved or changed.</p>
   </section>;
 }

@@ -82,4 +82,21 @@ assert.equal(expiredResult.fallback_reason, 'conversation_mismatch');
 assert.match(coachModeLabel({ mode: 'llm' }), /Python calculations/);
 assert.match(coachModeLabel({}), /Rule-based/);
 assert.match(fallbackNotice('budget_exhausted'), /budget/);
+assert.match(fallbackNotice('clarification_needed'), /clarify/);
+assert.match(fallbackNotice('unsupported_period_or_category'), /unavailable/);
+assert.match(fallbackNotice('request_conflict'), /not automatically/);
+// All non-bootstrap HTTP-200 fallback states stop after the original turn, even if a retry might later work.
+for (const reason of ['timeout', 'budget_exhausted', 'request_in_progress', 'rate_limited', 'concurrency_limit', 'clarification_needed',
+  'unsupported_period_or_category', 'request_conflict', 'conversation_mismatch', 'billing_uncertain']) {
+  const bodies = [];
+  const client = createCoachSession(async (path, options) => {
+    bodies.push(JSON.parse(options.body));
+    return { conversation_id: 'fixture', fallback_reason: reason, mode: 'rule_based' };
+  }, 'fixture', uuid);
+  const turn = client.turn('Spending');
+  await client.send(turn);
+  assert.equal(bodies.length, 2, reason);
+  await client.send(turn);
+  assert.deepEqual(bodies[2], bodies[1], reason);
+}
 console.log('Coach session checks passed: bootstrap, context, IDs, retries, isolation, abort, preview and fallback.');

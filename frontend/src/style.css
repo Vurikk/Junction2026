@@ -171,7 +171,18 @@ footer { color: #606b63; }
 .allowance-summary > p { margin: 5px 0; }
 .allowance-track { height: 9px; border-radius: 20px; background: #e0e5e1; margin: 12px 0 8px; }
 .allowance-summary > .text-button { font-size: 13px; text-align: left; }
+.estimate-form { margin-top: 12px; }
+.estimate-form fieldset { border: 0; padding: 0; min-width: 0; }
+.estimate-form legend { font-weight: bold; font-size: 15px; }
+.estimate-form label { font-size: 13px; }
+.estimate-form .fine { margin: 6px 0; }
+.estimate-form details { margin: 12px 0; }
 .home-chart h2 { font-size: 19px; }
+.home-current-goals h2 { font-size: 19px; margin: 0; }
+.home-current-goals .section-title { align-items: center; }
+.home-current-goals .row { gap: 12px; overflow-wrap: anywhere; }
+.home-current-goals .row > span { min-width: 0; }
+.home-current-goals small { display: block; text-transform: capitalize; }
 .home-chart .text-button { font-size: 13px; }
 .home-chart .section-title { align-items: center; }
 .home-chart .section-title h2 { margin-bottom: 0; }
@@ -203,6 +214,22 @@ footer { color: #606b63; }
 .conversation-mode p { text-align: left; font-size: 12px; }
 .conversation-welcome { font-size: 17px; color: #244c36; margin: 12px 0; }
 .starting-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.guided-badge { color: #38664c; font-size: 11px; padding: 2px 0 9px; }
+.guided-coach .conversation-log { position: relative; }
+.coach-welcome h3 { margin: 4px 0 8px; font-size: 20px; color: #006c3c; }
+.guided-questions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding-top: 10px;
+  border-top: 1px solid #d9e4dc; flex-shrink: 0; }
+.guided-questions button { text-align: left; display: flex; gap: 8px; align-items: center;
+  background: #eff8f1; border: 1px solid #cce2d2; color: #174d34; padding: 10px; font-size: 12px; min-height: 48px; }
+.guided-questions button span { font-size: 19px; color: #008c45; }
+.guided-period, .guided-footer { font-size: 11px; color: #586b60; }
+.guided-footer { margin: 8px 0 0; flex-shrink: 0; }
+.guided-result { border-bottom: 1px solid #e6eee9; padding-bottom: 5px; }
+.guided-result .fine { margin: 0 0 5px; }
+.guided-note { margin-top: 10px; font-size: 11px; color: #526257; }
+.guided-note p { font-size: 12px; }
+.guided-coach li { margin: 8px 0; font-size: 14px; }
+@media (max-height: 550px) { .guided-questions { max-height: 100px; overflow-y: auto; } }
 .coach .starting-actions button { padding: 8px 10px; font-size: 12px; border-radius: 18px; min-height: 40px; }
 .conversation-log { flex: 1; overflow-y: auto; min-height: 120px; overscroll-behavior: contain; padding: 4px 2px 12px; }
 .conversation-empty { font-size: 13px; color: #727b75; margin: 18px 4px; }
@@ -231,6 +258,7 @@ footer { color: #606b63; }
   max-height: none; max-width: none; padding: 0; border: 0; border-radius: 20px; color: #202421;
   background: white; overflow: hidden; position: fixed; top: var(--coach-top, 0px); bottom: 0; }
 .coach-dialog::backdrop { background: transparent; }
+.coach-dialog { border: 1px solid #d6ddd8; border-bottom: 0; }
 .coach-dialog[open] { display: flex; flex-direction: column; }
 .coach-dialog-heading { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
   border-bottom: 1px solid #d9e4dc; flex-shrink: 0; }

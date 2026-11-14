@@ -39,6 +39,14 @@ export function coachModeLabel(item) {
 }
 
 export function fallbackNotice(reason) {
+  if (reason === 'clarification_needed') return 'Please clarify the category, period or percentage in your next message.';
+  if (reason === 'unsupported_period_or_category') return 'Recorded data is unavailable for that category or period.';
+  if (reason === 'request_conflict') return 'This message could not be replayed safely. It was not automatically resubmitted.';
+  if (reason === 'session_limit') return 'This browser session has reached its conversation limit.';
+  if (['session_initialized', 'conversation_required'].includes(reason)) {
+    return 'The conversation could not finish starting. No automatic new request will be made.';
+  }
+  if (reason === 'unsupported_topic') return 'This topic uses the local Coach. Try a supported spending question or guided preview.';
   if (reason === 'budget_exhausted') return 'AI budget reached. Showing the rule-based answer.';
   if (['provider_error', 'timeout', 'invalid_model_output', 'billing_uncertain'].includes(reason)) {
     return 'AI is unavailable. Showing the rule-based answer.';

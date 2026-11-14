@@ -19,6 +19,7 @@ export default function CoachResult({ card, money }) {
       <h3>Compared with usual</h3>
       {row('Recorded spending', data.comparison?.spending_eur)}
       {row('Earlier-period average', data.baseline?.average_spending_eur)}
+      {data.baseline && <p className="fine">Average period: {data.baseline.start} – {data.baseline.end}</p>}
       {row('Difference', data.difference_eur)}
       <p className="fine">{data.status === 'insufficient_data' ? 'Not enough complete periods to compare.'
         : `Recorded spending is ${data.status === 'equal' ? 'the same as' : data.status} the earlier-period average.`}</p>

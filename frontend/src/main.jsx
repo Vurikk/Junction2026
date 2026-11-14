@@ -5,7 +5,8 @@ import './style.css';
 import Coach from './Coach';
 import CoachDialog from './CoachDialog';
 import Icon from './Icon';
-import HomeSummary, { PlanningContext } from './HomeSummary';
+import HomeSummary, { ChartTargetContext, PlanningContext } from './HomeSummary';
+import { chartPeriods } from './chartPeriods';
 
 const money = value => value == null ? 'Not available' : new Intl.NumberFormat('en-FI', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 2,
@@ -82,7 +83,20 @@ function App() {
   const [coachQuestion, setCoachQuestion] = useState('');
   const [coachOpen, setCoachOpen] = useState(false);
   const [goalNotice, setGoalNotice] = useState('');
+  const [focusGoal, setFocusGoal] = useState(false);
+  const [targetField, setTargetField] = useState('');
   useEffect(() => { window.scrollTo(0, 0); }, [page]);
+  useEffect(() => {
+    if (page === 'Goals' && focusGoal) { document.getElementById('name')?.focus(); setFocusGoal(false); }
+  }, [page, focusGoal]);
+  useEffect(() => {
+    if (page !== 'Home' || !targetField || !data.assumptions) return;
+    const plan = document.getElementById('spending-plan');
+    plan.open = true;
+    plan.querySelector('.advanced').open = true;
+    document.getElementById(targetField)?.focus();
+    setTargetField('');
+  }, [page, targetField, data.assumptions]);
   useEffect(() => {
     const controller = new AbortController();
     api('customers', { signal: controller.signal }).then(items => {
@@ -139,6 +153,9 @@ function App() {
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   function openCoach(question = '') { setCoachQuestion(question); setCoachOpen(true); }
+  function openTarget() {
+    setTargetField(period === 'Week' ? 'weekly_budget_eur' : 'monthly_budget_eur'); setPage('Home');
+  }
 
   const history = data['spending-history'];
   const points = history?.periods;
@@ -159,11 +176,13 @@ function App() {
       {!customer && !error && <p role="status">Loading your profiles…</p>}
       {page === 'Home' && <>
         <HomeSummary key={customer} data={data} money={money} openCoach={openCoach} onSpending={() => setPage('Spending')}
+          customer={customer} api={api} refreshKey={`${reload}-${data.goals?.map(goal => goal.id).join(',')}`}
+          onAddGoal={() => { setPage('Goals'); setFocusGoal(true); }}
+          onTarget={openTarget}
           onPlan={() => {
             const plan = document.getElementById('spending-plan');
             if (plan) { plan.open = true; plan.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
           }} />
-        <button className="home-goals text-button" onClick={() => setPage('Goals')}>Goals (optional) &rsaquo;</button>
         {data.assumptions && <PlanningForm key={`${customer}-${reload}`} assumptions={data.assumptions}
           suggestions={data['planning-suggestions']} busy={busy} onSave={savePlan} />}
         <details className="supporting"><summary>Account and mortgage information</summary><section>
@@ -178,18 +197,26 @@ function App() {
         <section><div className="section-title"><h2>Spending history</h2><span className="tag">Recorded</span></div>
           <div className="segmented">{['Week', 'Month'].map(value => <button key={value} aria-pressed={period === value}
             disabled={busy} onClick={() => { if (value !== period) { setData({}); setPeriod(value); } }}>{value}</button>)}</div>
-          {history ? <div className="chart" role="img" aria-label={`${period} spending with historical average and confirmed chart target`}>
-            <ResponsiveContainer width="100%" height={230}><BarChart data={points} margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
+          {history ? <div className="chart" role="img" aria-label={`${period} spending with historical average and chart target`}>
+            <ResponsiveContainer width="100%" height={230}><BarChart data={chartPeriods(history)}
+              margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
               <XAxis dataKey="start" tickLine={false} axisLine={false} />
-              <YAxis tickLine={false} axisLine={false} /><Tooltip formatter={value => money(value)} />
+              <YAxis tickLine={false} axisLine={false} padding={{ top: 18, bottom: 8 }} /><Tooltip formatter={value => money(value)} />
               <Bar dataKey="spending_eur" name="Spent" fill="#008c45" radius={[5, 5, 0, 0]} />
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
-                stroke="#94662e" strokeDasharray="5 5" ifOverflow="extendDomain" />}
+                stroke="#94662e" strokeDasharray="5 5" ifOverflow="extendDomain"
+                label={{ value: 'avg.', position: 'insideBottomLeft', fill: '#94662e', fontSize: 11,
+                  stroke: 'white', strokeWidth: 3, paintOrder: 'stroke' }} />}
               {history.budget_target_eur != null && <ReferenceLine y={Number(history.budget_target_eur)}
-                stroke="#3653a0" strokeDasharray="3 3" ifOverflow="extendDomain" />}
+                stroke="#3653a0" strokeWidth={2} strokeDasharray="3 3" ifOverflow="extendDomain"
+                label={{ value: 'goal', position: 'insideBottomLeft', fill: '#3653a0', fontSize: 11,
+                  stroke: 'white', strokeWidth: 3, paintOrder: 'stroke' }} />}
             </BarChart></ResponsiveContainer></div> : <p role="status">{error ? 'Spending unavailable.' : 'Loading spending…'}</p>}
           <p className="legend">– – {period} average: {money(history?.historical_average_eur)}</p>
-          <p>Chart target: {money(history?.budget_target_eur)}. Set targets in Home's optional spending plan.</p>
+          {history?.budget_target_eur != null ? <p>{history.target_source === 'automatic_historical'
+            ? 'Estimated plan target' : `${period} spending target`}: {money(history.budget_target_eur)}</p>
+            : <button className="text-button" disabled={!data.assumptions} onClick={openTarget}>Set spending target</button>}
+          <ChartTargetContext history={history} />
           <p className="fine">Chart targets are separate from safe spending allowances. Edge periods may be partial.</p>
           {points?.length > 0 && <><h3>Categories in the latest displayed period</h3>
           <p className="fine">{points?.at(-1)?.start} to {points?.at(-1)?.end}

@@ -31,9 +31,9 @@ const zero = render({
   'recorded-balances': { simultaneous_total_eur: 0, total_recorded_at: '2026-09-30T12:00:00' },
   budget: { daily_eur: '0', weekly_eur: '0', status: 'estimated', assumptions: { horizon_days: 30 } },
 });
-assert.equal((zero.match(/EUR 0.00/g) || []).length, 2);
+assert.equal((zero.match(/EUR 0.00/g) || []).length, 1);
 assert.match(zero, /2026-09-30/);
-assert.match(zero, /Usage tracking unavailable/);
+assert.doesNotMatch(zero, /allowance-track|Usage tracking unavailable/);
 
 const separate = render({ 'recorded-balances': {
   simultaneous_total_eur: null,
@@ -58,3 +58,16 @@ for (const status of ['above', 'below', 'equal']) {
   assert.doesNotMatch(html, /on track|doing well|saved progress/);
 }
 console.log('Home contract rendering checks passed: null, zero, separate accounts, comparisons and neutral track.');
+const goals = render({ goals: [{ id: 'fixture', name: 'Fixture goal', amount_eur: 10, priority: 'critical' }] });
+for (const text of ['Current goals', 'Add goal', 'Fixture goal', 'EUR 10.00', 'critical']) assert.ok(goals.includes(text));
+assert.match(render({ goals: [] }), /No goals yet/);
+assert.doesNotMatch(render({ goals: [] }), /Fixture goal/);
+const targetHistory = { period: 'week', periods: [{ start: '2026-08-24', end: '2026-08-30', spending_eur: 10 }],
+  historical_average_eur: 15, budget_target_eur: 0 };
+const autoTarget = render({ 'spending-history': { ...targetHistory, target_source: 'automatic_historical' } });
+assert.match(autoTarget, /Estimated plan target EUR 0.00/);
+const manualTarget = render({ 'spending-history': { ...targetHistory, target_source: 'manual' } });
+assert.match(manualTarget, /Target EUR 0.00/);
+assert.doesNotMatch(manualTarget, /Estimated plan target/);
+assert.match(render({ 'spending-history': { ...targetHistory, budget_target_eur: null } }), /Set spending target/);
+console.log('PASS: automatic provenance, manual zero and unavailable chart target.');

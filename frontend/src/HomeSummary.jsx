@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, ReferenceLine } from 'recharts';
+import React from 'react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
+import { chartPeriods } from './chartPeriods';
+import SafeToSpend from './SafeToSpend';
 
 const date = value => value ? value.slice(0, 10) : 'Date unavailable';
 
-export default function HomeSummary({ data, money, openCoach, onSpending, onPlan }) {
-  const [range, setRange] = useState('Today');
+export default function HomeSummary({ data, money, openCoach, onSpending, onPlan, onAddGoal, onTarget, customer, api, refreshKey }) {
   const balances = data['recorded-balances'];
   const comparison = data['spending-comparison'];
   const budget = data.budget;
   const history = data['spending-history'];
+  const points = chartPeriods(history);
   const headlines = { below: 'Spending below your usual', above: 'Spending above your usual', equal: 'Spending matches your usual' };
   const headline = headlines[comparison?.status] || 'Let’s explore your spending';
-  const allowance = range === 'Today' ? budget?.daily_eur : budget?.weekly_eur;
   return <>
     <div className="money-card">
     <section className="recorded-balance"><h1>Balance</h1>
@@ -27,17 +28,8 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
         <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M12 1 15 9 23 12 15 15 12 23 9 15 1 12 9 9Z" /></svg>Ask Coach</button>
     </section>
-    <section className="allowance-summary"><div className="allowance-heading"><h2>Safe to spend</h2>
-      <div className="allowance-toggle">{['Today', 'Week'].map(value =>
-        <button key={value} aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}</div></div>
-      <strong className="allowance-amount">{money(allowance)}</strong>
-      <p className="fine">Estimated {range === 'Today' ? 'per day' : 'per week'}</p>
-      <div className="allowance-track" aria-hidden="true" />
-      <p className="fine">Usage tracking unavailable</p>
-      <button className="text-button" onClick={onPlan} disabled={!data.assumptions}>
-        {allowance == null ? 'Complete your spending plan' : 'Review your spending plan'} ›</button>
-      {budget?.shortfall_eur > 0 && <p role="alert">Bills and reserve shortfall: {money(budget.shortfall_eur)}</p>}
-    </section>
+    <SafeToSpend customer={customer} api={api} money={money} budget={budget} assumptions={data.assumptions}
+      onPlan={onPlan} refreshKey={refreshKey} goals={data.goals} onAddGoal={onAddGoal} />
     </div>
     <details className="money-details"><summary>Details</summary>
       <h3>Balance source</h3>
@@ -55,35 +47,57 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
           {comparison?.baseline?.period_count != null && `${comparison.baseline.period_count} prior periods.`}</p>
         <p>{comparison?.note || comparison?.insufficient_data_reason || 'Comparison data is unavailable.'}</p>
         <p>Rule-based demo. Historical spending is not a measure of goal progress.</p>
-      <h3>Estimate details</h3>
+      <h3>Confirmed plan details</h3>
         <p>{budget?.status === 'estimated' ? `Based on your confirmed ${budget.assumptions.horizon_days}-day plan.`
           : 'All six planning amounts need confirmation. Blank amounts remain unknown.'}</p>
-        <p>Includes everyday costs. Today selects the daily estimate, not a live remaining balance. Payment timing is not modeled.
-          No consumed fraction is available, so the neutral track does not show progress.</p>
+        <p>Includes everyday costs. Day selects a daily estimate, not a live remaining balance. Payment timing is not modeled.</p>
     </details>
     </div>
+    <section className="home-current-goals"><div className="section-title"><h2>Current goals</h2>
+      <button className="text-button" onClick={onAddGoal}>Add goal</button></div>
+      {!data.goals ? <p>Goals unavailable.</p> : data.goals.length === 0 ? <p>No goals yet.</p>
+        : data.goals.map(goal => <div className="row" key={goal.id}>
+          <span>{goal.name}<small className="fine">{goal.priority}</small></span><b>{money(goal.amount_eur)}</b>
+        </div>)}
+    </section>
     <section className="home-chart"><div className="section-title"><h2>Spending history</h2>
       <button className="text-button" onClick={onSpending}>View all ›</button></div>
-      {history?.periods?.length ? <>
-        <p className="fine">{history.periods[0].start}–{history.periods.at(-1).end} · Recorded {history.period} periods</p>
+      {points?.length ? <>
+        <p className="fine">{points[0].start}–{points.at(-1).end} · Recorded {history.period} periods</p>
         <div role="img" aria-label="Recorded spending bars with historical average and optional chart target">
           <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={history.periods} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+            <BarChart data={points} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
               <XAxis dataKey="start" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={45} />
+              <YAxis hide padding={{ top: 18, bottom: 8 }} />
               <Tooltip formatter={value => money(value)} />
               <Bar dataKey="spending_eur" name="Recorded spending" fill="#008c45" radius={[3, 3, 0, 0]} />
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
-                stroke="#94662e" strokeDasharray="4 4" ifOverflow="extendDomain" />}
+                stroke="#94662e" strokeDasharray="4 4" ifOverflow="extendDomain"
+                label={{ value: 'avg.', position: 'insideBottomLeft', fill: '#94662e', fontSize: 11,
+                  stroke: 'white', strokeWidth: 3, paintOrder: 'stroke' }} />}
               {history.budget_target_eur != null && <ReferenceLine y={Number(history.budget_target_eur)}
-                stroke="#3653a0" strokeDasharray="3 3" ifOverflow="extendDomain" />}
+                stroke="#3653a0" strokeWidth={2} strokeDasharray="3 3" ifOverflow="extendDomain"
+                label={{ value: 'goal', position: 'insideBottomLeft', fill: '#3653a0', fontSize: 11,
+                  stroke: 'white', strokeWidth: 3, paintOrder: 'stroke' }} />}
             </BarChart>
           </ResponsiveContainer>
         </div><p className="fine">Dashed: historical average {money(history.historical_average_eur)}
-          {history.budget_target_eur != null && ` · Target ${money(history.budget_target_eur)}`}</p>
+          {history.budget_target_eur != null && ` · ${history.target_source === 'automatic_historical'
+            ? 'Estimated plan target' : 'Target'} ${money(history.budget_target_eur)}`}</p>
+        <ChartTargetContext history={history} />
       </> : <p className="fine">Spending history unavailable.</p>}
+      {history && history.budget_target_eur == null && <button className="text-button" disabled={!data.assumptions}
+        onClick={onTarget}>Set spending target</button>}
       <button className="text-button" onClick={onSpending}>See where it went ›</button>
     </section>
   </>;
+}
+
+export function ChartTargetContext({ history }) {
+  if (history?.target_source !== 'automatic_historical' || history.budget_target_eur == null) return null;
+  return <p className="fine">Includes usual spending and extra headroom.
+    {history.target_source_period && ` Based on ${history.target_source_period.start}–${history.target_source_period.end}.`}
+    {' '}Historical scenario, not a past spending limit.</p>;
 }
 
 export function PlanningContext({ suggestions, money }) {
