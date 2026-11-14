@@ -30,6 +30,9 @@ section { background: white; border: 1px solid #e3e8df; border-radius: 22px; pad
 .section-title { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
 .tag { font-size: 10px; background: #edf4e8; border-radius: 20px; padding: 5px 9px; text-transform: capitalize; white-space: nowrap; }
 .critical { background: #fff0d7; color: #76531b; }
+.important { background: #e8eefb; color: #3653a0; }
+.check { display: flex; align-items: flex-start; gap: 10px; }
+.check input { width: 20px; min-height: 20px; flex-shrink: 0; }
 .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 0; }
 .metrics > div + div { border-left: 1px solid #e1e8df; padding-left: 12px; }
 .metrics small { color: #637066; margin-bottom: 5px; }

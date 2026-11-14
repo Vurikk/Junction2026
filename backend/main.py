@@ -42,12 +42,24 @@ class SpendingSummary(Model):
     note: str
 
 
+class Allocation(Model):
+    goal_id: str
+    allocated_eur: float | None
+    completion_periods: int | None
+    feasibility: Literal["unknown", "funded", "conditional", "not_funded_in_horizon"]
+
+
 class Budget(Model):
     customer_id: str
-    status: Literal["insufficient_data"] = "insufficient_data"
+    status: Literal["insufficient_data", "estimated"]
     daily_eur: float | None = None
     weekly_eur: float | None = None
     missing_inputs: list[str]
+    confidence: Literal["unknown", "user_confirmed_assumptions"]
+    assumptions: dict
+    allocations: list[Allocation]
+    savings_capacity_eur: float | None
+    shortfall_eur: float | None
 
 
 class GoalInput(Model):
@@ -61,9 +73,7 @@ class Goal(GoalInput):
     customer_id: str
 
 
-class GoalAnalysis(Model):
-    customer_id: str
-    status: Literal["insufficient_data"] = "insufficient_data"
+class GoalAnalysis(Budget):
     ordered_goal_ids: list[str]
     total_target_eur: str
     explanation: str
@@ -138,7 +148,7 @@ def spending(request: Request, customer_id: str, month: str | None = Query(None,
     }
 
 
-@app.get("/api/customers/{customer_id}/budget", response_model=None)
+@app.get("/api/customers/{customer_id}/budget", response_model=Budget)
 def budget(request: Request, customer_id: str):
     customer_for(request, customer_id)
     return {"customer_id": customer_id, **plan(request.app.state.assumptions[customer_id], request.app.state.goals[customer_id])}
@@ -158,12 +168,13 @@ def create_goal(request: Request, customer_id: str, payload: GoalInput):
     return goal
 
 
-@app.get("/api/customers/{customer_id}/goal-analysis", response_model=None)
+@app.get("/api/customers/{customer_id}/goal-analysis", response_model=GoalAnalysis)
 def analyze_goals(request: Request, customer_id: str):
     customer_for(request, customer_id)
     ordered = sorted(request.app.state.goals[customer_id], key=lambda goal: PRIORITIES[goal.priority])
     return {
-        "customer_id": customer_id, **plan(request.app.state.assumptions[customer_id], ordered), "ordered_goal_ids": [goal.id for goal in ordered],
+        "customer_id": customer_id, **plan(request.app.state.assumptions[customer_id], ordered),
+        "ordered_goal_ids": [goal.id for goal in ordered],
         "total_target_eur": str(sum((goal.amount_eur for goal in ordered), Decimal("0.00"))),
         "explanation": "Required payments and reserves come first. Completion estimates assume explicitly confirmed repeating capacity."
     }

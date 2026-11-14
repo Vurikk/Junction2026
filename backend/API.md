@@ -15,7 +15,7 @@ Money accepts nonnegative EUR decimal strings (two decimal places, 12 digits max
 - `everyday_spending_eur`: planned everyday living costs, excluding bills already listed above.
 - `voluntary_goal_contribution_eur`: maximum voluntary savings contribution over the horizon.
 - `weekly_budget_eur`, `monthly_budget_eur`: optional chart targets, independent of safe allowances.
-- `horizon_days`: 1–366, default 30. All planning amounts refer to this same horizon.
+- `horizon_days`: 1â€“366, default 30. All planning amounts refer to this same horizon.
 - `repeat_plan`: default false. Explicitly confirms identical capacity each future horizon for conditional completion estimates.
 
 All six planning money fields must be supplied for allowances, including explicit zeros.
@@ -30,7 +30,7 @@ This aggregate model does not model intra-horizon payment timing; users must con
 
 ## Historical summaries
 `GET /api/customers/{id}/spending-history?period=week|month` (default month).
-`periods` contain calendar boundaries (weeks Monday–Sunday), `partial`, spending, category totals,
+`periods` contain calendar boundaries (weeks Mondayâ€“Sunday), `partial`, spending, category totals,
 basket totals, classification evidence/confidence, target and remaining budget. Zero-spend periods inside
 observed coverage are included. Averages use only full calendar periods between earliest/latest transactions;
 null when none exist. Coverage is not guaranteed. No partial-period extrapolation is performed.
@@ -39,7 +39,7 @@ Classifications are heuristics with visible reasons; everyday categories may inc
 Existing explicit payment-type exclusion applies, so transfers/refunds are never double-counted.
 
 `GET /api/customers/{id}/income` returns explicit positive income by month and likely recurring candidates.
-At least three similar payments (within 15%) and 25–35 day intervals are required. Types are salary,
+At least three similar payments (within 15%) and 25â€“35 day intervals are required. Types are salary,
 income, salary_payment and pension. Transfers, refunds and unrecognized credits are excluded.
 No candidate is confirmed income; payer identity is not inferred. Missing types may undercount actual income.
 
@@ -55,3 +55,45 @@ Analysis never mutates goals. No application approvals are treated as debt.
 
 Run synthetic engine tests: `python -m unittest backend.test_financial -v`.
 Run existing data-dependent API checks: `python -m unittest backend.test_api -v` with local demo data installed.
+
+## Integrated frontend calls
+
+| Screen/action | Request | Fields consumed |
+| --- | --- | --- |
+| Customer switch | `GET /api/customers` | `customer_id` |
+| Home recorded spending | `GET /api/customers/{id}/spending` | `month`, `spending_eur` |
+| Home allowances | `GET /api/customers/{id}/budget` | `status`, `daily_eur`, `weekly_eur`, `shortfall_eur`, `assumptions` |
+| Planning form | `GET`, confirmed `PUT /api/customers/{id}/assumptions` | Full object below |
+| Week/month chart | `GET /api/customers/{id}/spending-history?period=week\|month` | `periods`, `historical_average_eur`, `budget_target_eur` |
+| Goal list/create | `GET`, `POST /api/customers/{id}/goals` | Name, EUR target, critical/important/flexible priority |
+| Analyze goals | `GET /api/customers/{id}/goal-analysis` | Ordered allocations, capacity, completion periods, explanation |
+| Mortgage availability | `GET /api/customers/{id}/mortgages` | `applications`, `note` |
+
+All financial arithmetic remains in Python. Frontend number conversions only format/display API values.
+Changing customers reloads their data; successful goal creation or input confirmation reloads budget and clears stale analysis.
+Weeks are Monday through Sunday, not seven-day slices of a month. Chart targets are not safe allowance estimates.
+
+Example confirmed assumptions (illustrative values, not customer data):
+
+```json
+{
+  "available_funds_eur": "1000.00",
+  "confirmed_income_eur": "0.00",
+  "upcoming_essential_bills_eur": "400.00",
+  "emergency_reserve_eur": "200.00",
+  "everyday_spending_eur": "100.00",
+  "voluntary_goal_contribution_eur": "300.00",
+  "weekly_budget_eur": "70.00",
+  "monthly_budget_eur": "300.00",
+  "horizon_days": 30,
+  "repeat_plan": true
+}
+```
+
+For three EUR 200 goals (one per priority), this allocates EUR 200/100/0 in priority order,
+leaves daily EUR 3.33 and weekly EUR 23.31, and conditionally estimates completion in 1/2/2 planning periods.
+Without repeat confirmation, completion periods are null. Without all six money inputs, status is `insufficient_data`.
+History monetary totals are JSON numbers; optional chart targets and confirmed inputs may be decimal strings.
+
+Run real HTTP checks with `python -m unittest backend.test_integration -v`.
+The test uses local demo data and an isolated server; it never changes goals in an already-running app.

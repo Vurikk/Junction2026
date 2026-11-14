@@ -1,4 +1,8 @@
-# JSON API contracts (v0.1)
+# JSON API contracts
+
+The foundation routes below are retained. [Financial engine contracts](../backend/API.md) extend budget/analysis
+responses and define assumptions, spending-history and income routes. Those extensions take precedence over
+the abbreviated foundation response examples below.
 
 Base path: `/api`. Interactive, typed contracts: backend `/docs`; machine-readable schemas: `/openapi.json`.
 Responses use JSON. All monetary values represent EUR. Goal amounts use decimal strings for exact cents;
@@ -47,7 +51,8 @@ Only negative `purchase`, `utilities_payment`, and `housing_payment` transaction
 Transfers, investment deposits, income, refunds and unrecognised types are excluded to avoid counting money movements as purchases.
 This is deliberately a conservative subset of gross outflows, not the prototype's transfer-inclusive `get_total_spent`.
 The exclusion count covers all omitted rows. Average is included spending divided by calendar days in the month.
-No mortgage application expense is added to transaction spending. Budget lines remain unavailable.
+No mortgage application expense is added to transaction spending. The UI charts use `/spending-history`
+with calendar weeks/months and optional user-confirmed targets, as documented in `backend/API.md`.
 
 ## Daily / weekly budget
 
@@ -64,7 +69,9 @@ No mortgage application expense is added to transaction spending. Budget lines r
 ```
 
 Historical balances and mortgage income requirements do not establish a safe allowance.
-Until essential obligations, confirmed income and reserves are established, no spendable amount is estimated.
+Until all six planning inputs are confirmed through `/assumptions`, no spendable amount is estimated.
+The missing-input names above illustrate the original foundation; the current response uses monetary field names
+and includes accessible funds, everyday spending and voluntary contributions. See `backend/API.md` for the full current response.
 
 ## Goals
 
@@ -89,7 +96,7 @@ Until essential obligations, confirmed income and reserves are established, no s
 ```
 
 Name: 1–100 characters, at least one non-whitespace character. Amount: positive EUR target with at most two decimal places
-and 12 total digits. Priority: `critical` or `flexible`. Extra request fields are rejected.
+and 12 total digits. Priority: `critical`, `important` or `flexible`. Extra request fields are rejected.
 Goals belong to the selected customer, are in memory, and reset on restart/reload. Use one backend worker.
 No edit/delete or automatic modification is implemented. Repeated POSTs create distinct goals.
 
@@ -107,8 +114,9 @@ No edit/delete or automatic modification is implemented. Repeated POSTs create d
 }
 ```
 
-Deterministic Python analysis only: critical goals first, insertion order within each priority, exact sum of targets.
-This does not allocate savings or claim feasibility. The endpoint never modifies goals. No external LLM requests occur.
+Deterministic Python analysis: critical, important, then flexible, with insertion order within each priority.
+With confirmed inputs the engine allocates available contributions and returns conditional feasibility;
+otherwise amounts/times remain unknown. The endpoint never modifies goals. No external LLM requests occur.
 
 ## Mortgage applications
 

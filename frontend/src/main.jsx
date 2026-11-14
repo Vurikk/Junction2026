@@ -8,17 +8,59 @@ const money = value => value == null ? 'Not available' : new Intl.NumberFormat('
 }).format(Number(value));
 async function api(path, options = {}) {
   const response = await fetch(`/api/${path}`, options);
-  if (!response.ok) throw new Error('Could not load or save your information. Please try again.');
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const detail = Array.isArray(body.detail) ? body.detail.map(item => item.msg).join('; ') : body.detail;
+    throw new Error(detail || 'Could not load or save your information. Please try again.');
+  }
   return response.json();
 }
+
+const planningFields = [
+  ['available_funds_eur', 'Accessible funds now'],
+  ['confirmed_income_eur', 'Additional confirmed income during the plan'],
+  ['upcoming_essential_bills_eur', 'Upcoming essential bills and debt payments'],
+  ['emergency_reserve_eur', 'Emergency reserve to protect'],
+  ['everyday_spending_eur', 'Planned everyday costs, excluding bills above'],
+  ['voluntary_goal_contribution_eur', 'Maximum voluntary goal contribution'],
+  ['weekly_budget_eur', 'Weekly chart target (optional)'],
+  ['monthly_budget_eur', 'Monthly chart target (optional)'],
+];
+
+function PlanningForm({ assumptions, busy, onSave }) {
+  return <section><h2>Confirm your spending plan</h2>
+    <p>All amounts cover the same planning period. Enter zero where appropriate; blank means unknown.
+      Do not include income already held in accessible funds. Confirm you can pay bills before everyday spending starts.</p>
+    <form onSubmit={event => {
+      event.preventDefault();
+      const values = new FormData(event.currentTarget);
+      const payload = Object.fromEntries(planningFields.map(([key]) => [key, values.get(key) || null]));
+      payload.horizon_days = Number(values.get('horizon_days'));
+      payload.repeat_plan = values.get('repeat_plan') === 'on';
+      onSave(payload);
+    }}>
+      <label htmlFor="horizon_days">Planning period (days)</label>
+      <input id="horizon_days" name="horizon_days" type="number" min="1" max="366" step="1"
+        defaultValue={assumptions.horizon_days} required />
+      {planningFields.map(([key, label]) => <React.Fragment key={key}>
+        <label htmlFor={key}>{label} (€)</label>
+        <input id={key} name={key} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
+          defaultValue={assumptions[key] ?? ''} placeholder="Unknown" />
+      </React.Fragment>)}
+      <label className="check"><input name="repeat_plan" type="checkbox" defaultChecked={assumptions.repeat_plan} />
+        I confirm the same savings capacity will be available in each future planning period.</label>
+      <label className="check"><input type="checkbox" required />
+        I confirm these inputs and that essential bills can be paid before spending.</label>
+      <button className="primary" disabled={busy}>Confirm and calculate</button>
+    </form></section>;
+}
+
 function App() {
   const [customers, setCustomers] = useState([]);
   const [customer, setCustomer] = useState('');
   const [page, setPage] = useState('Home');
   const [data, setData] = useState({});
-  const [month, setMonth] = useState('');
   const [period, setPeriod] = useState('Month');
-  const [week, setWeek] = useState(0);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [analysis, setAnalysis] = useState(null);
@@ -34,25 +76,25 @@ function App() {
     if (!customer) return;
     const controller = new AbortController();
     setData({}); setError(''); setAnalysis(null);
-    ['spending', 'budget', 'goals'].forEach(resource => {
-      const query = resource === 'spending' && month ? `?month=${month}` : '';
+    ['spending', 'spending-history', 'budget', 'goals', 'assumptions', 'mortgages'].forEach(resource => {
+      const query = resource === 'spending-history' ? `?period=${period.toLowerCase()}` : '';
       api(`customers/${customer}/${resource}${query}`, { signal: controller.signal })
         .then(result => setData(old => ({ ...old, [resource]: result })))
         .catch(e => { if (e.name !== 'AbortError') setError(e.message); });
     });
     return () => controller.abort();
-  }, [customer, month, reload]);
+  }, [customer, period, reload]);
   async function createGoal(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const fields = new FormData(form);
     setBusy(true); setError('');
     try {
-      const goal = await api(`customers/${customer}/goals`, {
+      await api(`customers/${customer}/goals`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: fields.get('name').trim(), amount_eur: fields.get('amount'), priority: fields.get('priority') }),
       });
-      setData(old => ({ ...old, goals: [...(old.goals || []), goal] })); setAnalysis(null); form.reset();
+      setData({}); setAnalysis(null); form.reset(); setReload(value => value + 1);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   async function analyze() {
@@ -60,9 +102,18 @@ function App() {
     try { setAnalysis(await api(`customers/${customer}/goal-analysis`)); }
     catch (e) { setError(e.message); } finally { setBusy(false); }
   }
+  async function savePlan(payload) {
+    setBusy(true); setError('');
+    try {
+      await api(`customers/${customer}/assumptions`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      });
+      setData({}); setAnalysis(null); setReload(value => value + 1);
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
   const spending = data.spending;
-  const points = period === 'Week' ? spending?.daily.slice(week * 7, week * 7 + 7) : spending?.daily;
-  const profile = customers.find(item => item.customer_id === customer);
+  const history = data['spending-history'];
+  const points = history?.periods;
   return <div className="app">
     <header><a className="brand" href="#" onClick={() => setPage('Home')}><b>S</b>
         <span>Financial coach<small>Your money, made clearer</small></span></a>
@@ -70,7 +121,7 @@ function App() {
     <main>
       <div className="customer"><label htmlFor="customer">Your demo profile</label>
         <select id="customer" value={customer} disabled={busy || !customers.length} onChange={e => {
-          setCustomer(e.target.value); setMonth(''); setWeek(0);
+          setData({}); setAnalysis(null); setCustomer(e.target.value);
         }}><option value="" disabled>Select customer</option>
           {customers.map(item => <option key={item.customer_id}>{item.customer_id}</option>)}</select></div>
       <div className="heading"><p className="eyebrow">A LITTLE CLARITY, EVERY DAY</p>
@@ -87,42 +138,52 @@ function App() {
         <section><div className="section-title"><h2>Your spending room</h2><span className="tag">Estimate</span></div>
           <div className="metrics"><div><small>Per day</small><strong>{money(data.budget?.daily_eur)}</strong></div>
             <div><small>Per week</small><strong>{money(data.budget?.weekly_eur)}</strong></div></div>
-          <p>We need confirmed income, upcoming bills and an emergency reserve before showing a safe amount.</p></section>
+          <p>{data.budget?.status === 'estimated'
+            ? `Based on your confirmed ${data.budget.assumptions.horizon_days}-day plan. Includes planned everyday costs.`
+            : 'Confirm all six planning amounts below to calculate your spending allowance.'}</p>
+          {data.budget?.shortfall_eur > 0 && <p role="alert">Bills and reserve shortfall: {money(data.budget.shortfall_eur)}</p>}
+          <p className="fine">Estimates depend on your inputs and do not model payment timing.</p></section>
         <section><p className="eyebrow">YOUR MONEY AT A GLANCE</p><h2>A small check-in. A clearer plan.</h2>
           <p>Recorded spending {spending?.month ? `in ${spending.month}` : ''}</p><strong className="amount">{money(spending?.spending_eur)}</strong>
           <p>Transfers are excluded from recorded spending.</p>
           <button className="text-button" onClick={() => setPage('Spending')}>Explore spending →</button></section>
         <button className="goal-link" onClick={() => setPage('Goals')}><span>◎</span>
           <div><b>Something to save for?</b><small>Give your next goal a name.</small></div><span>→</span></button>
+        {data.assumptions && <PlanningForm key={`${customer}-${reload}`} assumptions={data.assumptions}
+          busy={busy} onSave={savePlan} />}
+        <section><h2>Mortgage information</h2>
+          <p>{data.mortgages ? (data.mortgages.applications.length
+            ? 'Linked mortgage application data available.' : 'No linked mortgage application.') : 'Loading mortgage information…'}</p>
+          <p>{data.mortgages?.note}</p></section>
       </>}
       {page === 'Spending' && <>
         <section><div className="section-title"><h2>Spending history</h2><span className="tag">Recorded</span></div>
-          <label htmlFor="month">Month</label><select id="month" disabled={busy} value={month || spending?.month || ''} onChange={e => {
-            setMonth(e.target.value); setWeek(0);
-          }}>{profile?.months.map(value => <option key={value}>{value}</option>)}</select>
-          <p className="amount">{money(spending?.spending_eur)}</p><p>Total for the selected month</p>
           <div className="segmented">{['Week', 'Month'].map(value => <button key={value} aria-pressed={period === value}
-            onClick={() => setPeriod(value)}>{value}</button>)}</div>
-          {period === 'Week' && <select aria-label="Week of month" value={week} onChange={e => setWeek(Number(e.target.value))}>
-            {Array.from({ length: Math.ceil((spending?.daily.length || 0) / 7) }, (_, index) =>
-              <option key={index} value={index}>Days {index * 7 + 1}–{Math.min(index * 7 + 7, spending.daily.length)}</option>)}
-          </select>}
-          {spending ? <div className="chart" role="img" aria-label="Daily spending in euros, with the monthly daily average">
+            disabled={busy} onClick={() => { if (value !== period) { setData({}); setPeriod(value); } }}>{value}</button>)}</div>
+          {history ? <div className="chart" role="img" aria-label={`${period} spending with historical average and confirmed chart target`}>
             <ResponsiveContainer width="100%" height={230}><BarChart data={points} margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
-              <XAxis dataKey="date" tickFormatter={value => value.slice(-2)} tickLine={false} axisLine={false} />
+              <XAxis dataKey="start" tickLine={false} axisLine={false} />
               <YAxis tickLine={false} axisLine={false} /><Tooltip formatter={value => money(value)} />
-              <Bar dataKey="amount_eur" name="Spent" fill="#008c45" radius={[5, 5, 0, 0]} />
-              <ReferenceLine y={spending.average_daily_eur} stroke="#94662e" strokeDasharray="5 5" ifOverflow="extendDomain" />
+              <Bar dataKey="spending_eur" name="Spent" fill="#008c45" radius={[5, 5, 0, 0]} />
+              {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
+                stroke="#94662e" strokeDasharray="5 5" ifOverflow="extendDomain" />}
+              {history.budget_target_eur != null && <ReferenceLine y={Number(history.budget_target_eur)}
+                stroke="#3653a0" strokeDasharray="3 3" ifOverflow="extendDomain" />}
             </BarChart></ResponsiveContainer></div> : <p role="status">{error ? 'Spending unavailable.' : 'Loading spending…'}</p>}
-          <p className="legend">– – Daily average: {money(spending?.average_daily_eur)}</p><p>Budget target: not available</p>
-          <details><summary>View daily amounts</summary>{points?.map(point => <div className="row" key={point.date}>
-            <span>{point.date}</span><b>{money(point.amount_eur)}</b></div>)}</details>
-          <p className="fine">{spending?.note}</p></section>
-        <section><h2>Spending categories</h2><div className="chips"><button aria-pressed="true">All spending</button>
-          {['Purchases', 'Housing', 'Bills'].map(value => <button key={value} disabled>{value}</button>)}</div>
-          <p>Category filters will be available when category totals are included.</p>
-          <h2>Your three spending baskets</h2>
-          <p>Basket names and amounts are not available in the current data.</p></section>
+          <p className="legend">– – {period} average: {money(history?.historical_average_eur)}</p>
+          <p>Chart target: {money(history?.budget_target_eur)}. Set targets in your Home spending plan.</p>
+          <p className="fine">Chart targets are separate from safe spending allowances. Edge periods may be partial.</p>
+          <details><summary>View periods, categories and baskets</summary>{points?.map(point => <div key={point.period}>
+            <h3>{point.start} – {point.end}{point.partial ? ' (partial)' : ''}</h3>
+            <div className="row"><span>Spending</span><b>{money(point.spending_eur)}</b></div>
+            <div className="row"><span>Remaining chart budget</span><b>{money(point.remaining_budget_eur)}</b></div>
+            {Object.entries(point.categories).map(([name, value]) =>
+              <div className="row" key={name}><span>{name}</span><b>{money(value)}</b></div>)}
+            <p>Estimated baskets (heuristic classification)</p>
+            {Object.entries(point.baskets).map(([name, value]) =>
+              <div className="row" key={name}><span>{name.replaceAll('_', ' ')}</span><b>{money(value)}</b></div>)}
+          </div>)}</details>
+          <p className="fine">{history?.note} Basket classifications are uncertain; everyday categories can contain essentials.</p></section>
       </>}
       {page === 'Goals' && <>
         <section><div className="section-title"><h2>Your goals</h2><span className="tag">One step at a time</span></div>
@@ -134,8 +195,14 @@ function App() {
           <button className="primary" onClick={analyze} disabled={busy || !data.goals?.length}>{busy ? 'Please wait…' : 'Analyze my goals'}</button>
           {analysis && <div className="analysis" role="status"><h3>Can I reach my goals?</h3>
           <p>{analysis.explanation}</p>
-            <dl><dt>Total goal amount</dt><dd>{money(analysis.total_target_eur)}</dd><dt>Savings per month</dt><dd>Not available</dd>
-              <dt>Estimated completion</dt><dd>Not available</dd></dl></div>}</section>
+            <dl><dt>Total goal amount</dt><dd>{money(analysis.total_target_eur)}</dd>
+              <dt>Savings capacity per planning period</dt><dd>{money(analysis.savings_capacity_eur)}</dd></dl>
+            {analysis.allocations.map(item => <div key={item.goal_id}>
+              <h3>{data.goals?.find(goal => goal.id === item.goal_id)?.name}</h3>
+              <p>Allocated: {money(item.allocated_eur)} · {item.feasibility.replaceAll('_', ' ')}</p>
+              <p>Completion: {item.completion_periods == null ? 'Not available'
+                : `${item.completion_periods} planning periods of ${analysis.assumptions.horizon_days} days`}</p>
+            </div>)}</div>}</section>
         <section><h2>A new goal</h2>
           <p>Big or small, give your plan a place to start.</p><form onSubmit={createGoal}>
           <label htmlFor="name">Goal name</label><input id="name" name="name" placeholder="e.g. A rainy-day fund" required maxLength={100}
@@ -143,9 +210,9 @@ function App() {
           <label htmlFor="amount">Target amount (€)</label><input id="amount" name="amount" type="number" inputMode="decimal"
             min="0.01" max="9999999999.99" step="0.01" placeholder="0.00" required />
           <label htmlFor="priority">How important is it?</label><select id="priority" name="priority" defaultValue="flexible">
-            <option value="critical">Critical — must come first</option><option disabled>Important — not available yet</option>
+            <option value="critical">Critical — must come first</option><option value="important">Important — comes next</option>
             <option value="flexible">Flexible — can wait</option></select>
-          <p className="fine">Critical goals come first. Important priority is not supported yet. Goals reset when the demo server restarts.</p>
+          <p className="fine">Critical, then important, then flexible. Goals reset when the demo server restarts.</p>
           <button className="primary" disabled={busy || !customer || !data.goals}>{busy ? 'Please wait…' : 'Create goal'}</button>
         </form></section>
       </>}
