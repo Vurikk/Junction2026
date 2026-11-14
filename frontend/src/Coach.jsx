@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import CategoryReduction from './CategoryReduction';
 import CoachResult from './CoachResult';
 import DemoQuestions from './DemoQuestions.jsx';
+import GuidedCoach from './GuidedCoach.jsx';
+import { guidedStarter, loadGuidedTurn } from './guidedCoach.js';
 import { canFollowUpReduction } from './demoQuestions.js';
 import { createCoachSession, coachModeLabel, fallbackNotice } from './coachSession';
 
@@ -44,8 +46,28 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
     setPreview(null); setError(''); setRetry(null);
     setMessages(old => [...old.filter(item => !item.tool), { text, user: true }, { tool }]);
   }
+  async function guide(action, text, retryTurn = null) {
+    if (pending.current) return;
+    const controller = new AbortController();
+    pending.current = controller;
+    const turn = retryTurn || { id: crypto.randomUUID(), action, text };
+    setBusy(true); setError(''); setRetry(null); setPreview(null);
+    if (!retryTurn) setMessages(old => [...old, { text, user: true }]);
+    try {
+      const result = await loadGuidedTurn(api, customer, turn.action, controller.signal);
+      if (!mounted.current || controller.signal.aborted) return;
+      setMessages(old => [...old.filter(item => item.turnId !== turn.id), { ...result, turnId: turn.id }]);
+    } catch (e) {
+      if (!mounted.current || controller.signal.aborted) return;
+      setError(e.message); setRetry({ guided: turn });
+    } finally {
+      if (mounted.current && pending.current === controller) { pending.current = null; setBusy(false); }
+    }
+  }
   async function ask(text, scenario, userText = text, retryTurn = null) {
     if (pending.current || !text.trim()) return;
+    const guided = !scenario && !retryTurn && guidedStarter(text);
+    if (guided) return guide(guided, userText);
     const controller = new AbortController();
     pending.current = controller;
     setBusy(true); setError(''); setRetry(null); setPreview(null);
@@ -105,17 +127,21 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
     setDraft(old => ({ ...old, [key]: value }));
   }
   return <section className="coach coach-conversation" aria-label="Financial coach conversation">
+    <small className="guided-label">Guided coaching · explore without changing your plan</small>
     <div className="starting-actions">
-      <button disabled={busy} onClick={() => ask('Spending by category', null, 'Understand spending')}>Understand spending</button>
-      <button disabled={busy} onClick={() => startTool('savings', 'Explore savings')}>Explore savings</button>
-      <button disabled={busy} onClick={() => ask('Goal progress', null, 'My goals')}>My goals</button>
+      <button disabled={busy} onClick={() => guide({ type: 'savings' }, 'What could I save on?')}>What could I save on?</button>
+      <button disabled={busy} onClick={() => guide({ type: 'goals' }, 'Are my goals realistic?')}>Are my goals realistic?</button>
+      <button disabled={busy} onClick={() => guide({ type: 'habits' }, 'Help with everyday habits')}>Help with everyday habits</button>
     </div>
     <DemoQuestions customer={customer} api={api} busy={busy} onAsk={text => ask(text)} />
     <div className="conversation-log" ref={log} role="log" aria-label="Conversation" aria-live="polite" tabIndex={0}>
       {messages.length === 0 && <p className="conversation-empty">What would you like to explore?</p>}
       {messages.map((item, index) => <article className={item.user ? 'chat user' : 'chat'} key={index}>
-        <small>{item.user ? 'You' : item.tool ? 'Coach' : coachModeLabel(item)}</small>
-        {item.tool === 'savings' ? <CategoryReduction customer={customer} api={api} money={money} />
+        <small>{item.user ? 'You' : item.guided ? 'Guided coaching' : item.tool ? 'Coach' : coachModeLabel(item)}</small>
+        {item.guided ? <GuidedCoach turn={item.guided} money={money} busy={busy}
+          active={index === messages.length - 1 && !error && !retry} onChoose={guide}
+          onCreateGoal={() => startTool('goal', 'Preview a new goal')} />
+          : item.tool === 'savings' ? <CategoryReduction customer={customer} api={api} money={money} />
           : item.tool === 'goal' ? <form onSubmit={event => {
             event.preventDefault(); ask('Preview this goal', draft);
           }}><fieldset disabled={busy}><legend>Try a goal</legend>
@@ -158,7 +184,8 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
       {busy && <p role="status" className="checking">Checking your recorded information…</p>}
       {error && <div className="error" role="alert"><p>{error}</p>
         {retry && <button disabled={busy}
-          onClick={() => ask(retry.text, retry.scenario, retry.userText, retry.turn)}>Retry answer</button>}</div>}
+          onClick={() => retry.guided ? guide(retry.guided.action, retry.guided.text, retry.guided)
+            : ask(retry.text, retry.scenario, retry.userText, retry.turn)}>Retry answer</button>}</div>}
     </div>
     <form className="chat-composer" ref={composer} onSubmit={event => {
       event.preventDefault(); ask(question); setQuestion('');
@@ -167,7 +194,7 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
       <div><input id="question" value={question} onChange={event => setQuestion(event.target.value)} required maxLength={500}
         placeholder="Spending, averages or allowances" disabled={busy} autoComplete="off" />
         <button className="primary" disabled={busy || !question.trim()} aria-label="Send message">Send</button></div>
-      <small>Follow-ups use this profile’s conversation. Guided previews never change your plan.</small>
+      <small>Free-text Coach remains available. Guided answers use local calculations; they do not send messages to AI.</small>
     </form>
   </section>;
 }
