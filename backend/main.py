@@ -2,6 +2,7 @@
 
 import os
 from contextlib import asynccontextmanager
+from datetime import date
 from decimal import Decimal
 from typing import Literal
 from uuid import uuid4
@@ -12,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .data_test import DATA_DIR, load_customers
 from .financial import history, income, plan, PRIORITIES
+from .data_coach import recorded_balances, spending_comparison, planning_suggestions, category_reduction
 
 
 class Model(BaseModel):
@@ -235,6 +237,40 @@ def spending_history(request: Request, customer_id: str, period: Literal["week",
 @app.get("/api/customers/{customer_id}/income")
 def income_analysis(request: Request, customer_id: str):
     return income(customer_for(request, customer_id))
+
+
+@app.get("/api/customers/{customer_id}/recorded-balances")
+def account_balances(request: Request, customer_id: str):
+    return recorded_balances(customer_for(request, customer_id))
+
+
+@app.get("/api/customers/{customer_id}/spending-comparison")
+def compare_spending(request: Request, customer_id: str, period: Literal["week", "month"] = "month"):
+    return spending_comparison(customer_for(request, customer_id), period)
+
+
+@app.get("/api/customers/{customer_id}/planning-suggestions")
+def suggest_planning(request: Request, customer_id: str):
+    customer = customer_for(request, customer_id)
+    return planning_suggestions(customer, request.app.state.assumptions[customer_id])
+
+
+class CategoryReductionInput(Model):
+    category: str = Field(min_length=1, max_length=100, pattern=r"\S")
+    period: Literal["week", "month"]
+    period_start: date
+    reduction_percent: Decimal = Field(ge=0, le=100, max_digits=5, decimal_places=2)
+
+
+@app.post("/api/customers/{customer_id}/category-reduction")
+def reduce_category(request: Request, customer_id: str, payload: CategoryReductionInput):
+    customer = customer_for(request, customer_id)
+    try:
+        return category_reduction(customer, **payload.model_dump())
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
 
 
 class CoachInput(Model):
