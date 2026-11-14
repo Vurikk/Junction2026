@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, ReferenceLine } from 'recharts';
 import { chartPeriods } from './chartPeriods';
 
-const date = value => value ? value.slice(0, 10) : 'Date unavailable';
+const date = value => {
+  const parsed = new Date(`${value?.slice(0, 10)}T12:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? 'Date unavailable'
+    : new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(parsed);
+};
 
 export default function HomeSummary({ data, money, openCoach, onSpending, onPlan, onAddGoal }) {
   const [range, setRange] = useState('Today');
@@ -42,26 +46,26 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
     </section>
     </div>
     <details className="money-details"><summary>Details</summary>
-      <h3>Balance source</h3>
-      <p>{balances?.note || 'This is not a live bank balance.'}</p>
-      {balances?.simultaneous_total_eur != null ? <p>As of {date(balances.total_recorded_at)} · Historical snapshot</p>
-        : <><p>{balances?.total_unavailable_reason}</p>{balances?.accounts?.map((account, index) =>
-          <p key={account.account_id}>Account {index + 1}: {date(account.recorded_at)} · Historical snapshot</p>)}</>}
+      <h3>About your balance</h3>
+      <p>These are past account balances, not live balances. Check your bank for the money you can use today.</p>
+      {balances?.simultaneous_total_eur != null ? <p>As of {date(balances.total_recorded_at)} · Past account balance</p>
+        : <><p>A combined balance is unavailable when account records are missing or come from different times.</p>{balances?.accounts?.map((account, index) =>
+          <p key={account.account_id}>Account {index + 1}: {date(account.recorded_at)} · Past account balance</p>)}</>}
       <h3>{headline}</h3>
       <p>{comparison?.comparison && comparison?.baseline && headlines[comparison.status]
         ? `${date(comparison.comparison.start)}–${date(comparison.comparison.end)}: ${money(comparison.comparison.spending_eur)} spent.`
         : 'A comparison is unavailable; explore the spending we have recorded.'}</p>
-        <p>Prior-period average: {money(comparison?.baseline?.average_spending_eur)}.</p>
-        <p>Signed difference: {money(comparison?.difference_eur)}.</p>
-        <p>{comparison?.baseline && `${comparison.baseline.start}–${comparison.baseline.end}, `}
-          {comparison?.baseline?.period_count != null && `${comparison.baseline.period_count} prior periods.`}</p>
-        <p>{comparison?.note || comparison?.insufficient_data_reason || 'Comparison data is unavailable.'}</p>
-        <p>Rule-based demo. Historical spending is not a measure of goal progress.</p>
+        <p>Average in earlier months: {money(comparison?.baseline?.average_spending_eur)}.</p>
+        <p>Difference from that average: {money(comparison?.difference_eur)}.</p>
+        <p>{comparison?.baseline && `${date(comparison.baseline.start)} – ${date(comparison.baseline.end)} · `}
+          {comparison?.baseline?.period_count != null && `${comparison.baseline.period_count} earlier months.`}</p>
+        <p>Some transactions may be missing. Transfers and refunds are not included.</p>
+        <p>Past spending does not tell us how much you have saved towards your goals.</p>
       <h3>Estimate details</h3>
         <p>{budget?.status === 'estimated' ? `Based on your confirmed ${budget.assumptions.horizon_days}-day plan.`
           : 'All six planning amounts need confirmation. Blank amounts remain unknown.'}</p>
-        <p>Includes everyday costs. Today selects the daily estimate, not a live remaining balance. Payment timing is not modeled.
-          No consumed fraction is available, so the neutral track does not show progress.</p>
+        <p>This estimate includes everyday spending. Purchases are not deducted as you make them.
+          Check when bills are due before spending. The bar does not track money used.</p>
     </details>
     </div>
     <section className="home-current-goals"><div className="section-title"><h2>Current goals</h2>
@@ -74,12 +78,12 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
     <section className="home-chart"><div className="section-title"><h2>Spending history</h2>
       <button className="text-button" onClick={onSpending}>View all ›</button></div>
       {points?.length ? <>
-        <p className="fine">{points[0].start}–{points.at(-1).end} · Recorded {history.period} periods</p>
+        <p className="fine">{date(points[0].start)} – {date(points.at(-1).end)} · Recorded {history.period} periods</p>
         <div role="img" aria-label="Recorded spending bars with historical average and optional chart target">
           <ResponsiveContainer width="100%" height={150}>
             <BarChart data={points} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-              <XAxis dataKey="start" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={45} />
-              <Tooltip formatter={value => money(value)} />
+              <XAxis tickFormatter={date} dataKey="start" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={45} />
+              <Tooltip labelFormatter={date} formatter={value => money(value)} />
               <Bar dataKey="spending_eur" name="Recorded spending" fill="#008c45" radius={[3, 3, 0, 0]} />
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
                 stroke="#94662e" strokeDasharray="4 4" ifOverflow="extendDomain" />}
@@ -97,14 +101,14 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
 
 export function PlanningContext({ suggestions, money }) {
   const labels = { income: 'Income', housing_utilities: 'Housing and utilities', food: 'Food', everyday_purchases: 'Everyday purchases' };
-  return <details className="planning-context"><summary>Historical context for your review</summary>
-    <p>Monthly observations, not confirmed future amounts. Food overlaps everyday purchases; do not add them together.</p>
+  return <details className="planning-context"><summary>Past spending to help you plan</summary>
+    <p>These monthly averages are a starting point, not a forecast. Food is already included in everyday purchases, so do not add both amounts together.</p>
     {suggestions ? Object.entries(suggestions.observations).map(([key, observation]) => <div key={key}>
       <h3>{labels[key]}</h3><p>{money(observation.average_monthly_eur)} per recorded month</p>
       <p className="fine">{observation.source_period
-        ? `${observation.source_period.start}–${observation.source_period.end}` : 'Period unavailable'} · {observation.confidence} confidence</p>
-      <p className="fine">{observation.unavailable_reason || observation.limitations.join(' ')}</p>
+        ? `${date(observation.source_period.start)} – ${date(observation.source_period.end)}` : 'Period unavailable'}</p>
+      <p className="fine">{observation.average_monthly_eur == null ? 'Not enough records to estimate this amount.' : 'Some records may be missing. Check what you expect to receive or spend before using this amount.'}</p>
     </div>) : <p>Historical suggestions unavailable. Enter only amounts you can confirm.</p>}
-    <p className="fine">Amounts are not scaled to your planning period or copied into the form automatically.</p>
+    <p className="fine">These are monthly averages. Adjust them for the length of your plan and enter only amounts you can confirm.</p>
   </details>;
 }

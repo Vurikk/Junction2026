@@ -22,20 +22,20 @@ async function api(path, options = {}) {
 }
 
 const planningFields = [
-  ['available_funds_eur', 'Accessible funds now'],
-  ['confirmed_income_eur', 'Additional confirmed income during the plan'],
-  ['upcoming_essential_bills_eur', 'Upcoming essential bills and debt payments'],
-  ['emergency_reserve_eur', 'Emergency reserve to protect'],
-  ['everyday_spending_eur', 'Planned everyday costs, excluding bills above'],
-  ['voluntary_goal_contribution_eur', 'Maximum voluntary goal contribution'],
-  ['weekly_budget_eur', 'Weekly chart target (optional)'],
-  ['monthly_budget_eur', 'Monthly chart target (optional)'],
+  ['available_funds_eur', 'Money you can use today', 'Your available bank balance and cash, including money you will protect below. Leave out credit limits.'],
+  ['confirmed_income_eur', 'Money you expect to receive', 'Pay or other income you are sure will arrive during this plan. Do not count money already in your balance again.'],
+  ['upcoming_essential_bills_eur', 'Bills you need to pay', 'Rent, electricity, insurance and required loan payments due during this plan. Exclude bills already paid.'],
+  ['emergency_reserve_eur', 'Money to keep untouched', 'Money you want to protect for emergencies. It will not be used for spending or goals.'],
+  ['everyday_spending_eur', 'Everyday spending', 'Your expected groceries, transport and other daily costs for the whole plan. Do not include bills entered above.'],
+  ['voluntary_goal_contribution_eur', 'Most you want to put towards goals', 'Your total limit for all goals during this plan. Only money left after bills, emergency money and everyday costs can be allocated.'],
+  ['weekly_budget_eur', 'Weekly spending target (optional)', 'A reference line on the weekly chart. It does not change your spending plan.'],
+  ['monthly_budget_eur', 'Monthly spending target (optional)', 'A reference line on the monthly chart. It does not change your spending plan.'],
 ];
 
 function PlanningForm({ assumptions, suggestions, busy, onSave }) {
   return <details className="planning" id="spending-plan"><summary>Optional spending plan</summary><section><h2>Confirm your spending plan</h2>
-    <p>All amounts cover the same planning period. Enter zero where appropriate; blank means unknown.
-      Do not include income already held in accessible funds. Confirm you can pay bills before everyday spending starts.</p>
+    <p>Use totals for the whole plan, not daily amounts. Enter 0 if something does not apply.
+      Leave an amount blank if you are unsure. Count each amount only once.</p>
     <PlanningContext suggestions={suggestions} money={money} />
     <form onSubmit={event => {
       event.preventDefault();
@@ -45,25 +45,27 @@ function PlanningForm({ assumptions, suggestions, busy, onSave }) {
       payload.repeat_plan = values.get('repeat_plan') === 'on';
       onSave(payload);
     }}>
-      <details className="advanced"><summary>Advanced: period, repeating plan and chart targets</summary>
-      <label htmlFor="horizon_days">Planning period (days)</label>
+      <details className="advanced"><summary>Plan length and extra options</summary>
+      <label htmlFor="horizon_days">How many days should this plan cover?</label>
       <input id="horizon_days" name="horizon_days" type="number" min="1" max="366" step="1"
         onWheel={event => event.currentTarget.blur()} defaultValue={assumptions.horizon_days} required />
-      {planningFields.slice(6).map(([key, label]) => <React.Fragment key={key}>
+      {planningFields.slice(6).map(([key, label, hint]) => <React.Fragment key={key}>
         <label htmlFor={key}>{label} (€)</label>
-        <input id={key} name={key} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
+        <p className="fine" id={`${key}-help`}>{hint}</p>
+        <input id={key} name={key} aria-describedby={`${key}-help`} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
           onWheel={event => event.currentTarget.blur()} defaultValue={assumptions[key] ?? ''} placeholder="Unknown" />
       </React.Fragment>)}
       <label className="check"><input name="repeat_plan" type="checkbox" defaultChecked={assumptions.repeat_plan} />
-        I confirm the same savings capacity will be available in each future planning period.</label></details>
+        I expect the same amount to be available for goals each time this plan repeats.</label></details>
       <p>Your plan covers {assumptions.horizon_days} days unless changed above. Blank amounts stay unknown.</p>
-      {planningFields.slice(0, 6).map(([key, label]) => <React.Fragment key={key}>
-        <label htmlFor={key}>{label} (EUR)</label>
-        <input id={key} name={key} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
+      {planningFields.slice(0, 6).map(([key, label, hint]) => <React.Fragment key={key}>
+        <label htmlFor={key}>{label} (€)</label>
+        <p className="fine" id={`${key}-help`}>{hint}</p>
+        <input id={key} name={key} aria-describedby={`${key}-help`} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
           onWheel={event => event.currentTarget.blur()} defaultValue={assumptions[key] ?? ''} placeholder="I don't know" />
       </React.Fragment>)}
       <label className="check"><input type="checkbox" required />
-        I confirm these inputs and that essential bills can be paid before spending.</label>
+        I have checked these amounts and can cover my essential bills before spending.</label>
       <button className="primary" disabled={busy}>Confirm and calculate</button>
     </form></section></details>;
 }
