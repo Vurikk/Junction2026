@@ -194,3 +194,7 @@ explicit 10% income reserve-building and 50% remaining-surplus goal allocation a
 Not today's affordability; current reserve adequacy and active debt remain unknown. No balances are added to income.
 See [AUTOMATIC_BUDGET_HANDOFF.md](AUTOMATIC_BUDGET_HANDOFF.md) for exact schema, arithmetic, examples and 39-test evidence.
 Existing confirmed manual plans, cash-only draft endpoint, goals and Coach runtime are unchanged.
+
+Chart integration: spending-history now falls back to the automatic TOTAL historical spending benchmark when the
+matching-period manual target is null. Explicit manual0 wins. Additive target_source (manual|automatic_historical|null),
+target_source_period, target_basis and target_limitations describe provenance. Exact weekly formula and tests in handoff.

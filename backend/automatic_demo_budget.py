@@ -73,3 +73,23 @@ def automatic_budget(customer, goals, as_of=None):
                   reserve_contribution_eur=float(reserve), reserve_shortfall_eur=float(reserve_target - reserve),
                   goal_budget_eur=float(goal_budget), goal_allocated_eur=float(allocated))
     return result
+
+
+def chart_target(customer, goals, manual_target, period):
+    """Matching manual target wins; otherwise use the retrospective TOTAL spending benchmark."""
+    metadata = {"target_source": None, "target_source_period": None, "target_basis": None, "target_limitations": []}
+    if manual_target is not None:
+        metadata.update(target_source="manual", target_basis="Explicit matching-period user budget target.")
+        return manual_target, metadata
+    calculated = automatic_budget(customer, goals)
+    metadata["target_limitations"] = calculated["limitations"]
+    if calculated["status"] != "estimated":
+        metadata["target_basis"] = "Automatic benchmark unavailable: " + calculated["status"]
+        return None, metadata
+    total = money(calculated["protected_spending_eur"]) + money(calculated["monthly_extra_eur"])
+    target = total if period == "month" else (total * 3 * 7 / calculated["covered_days"]).quantize(
+        Decimal("0.01"), rounding=ROUND_DOWN)
+    metadata.update(target_source="automatic_historical", target_source_period=calculated["source_period"],
+                    target_basis="Historical spending benchmark: protected spending plus extra headroom for a typical month. "
+                    "Weekly = monthly total * 3 / covered calendar days * 7, rounded down to cents.")
+    return float(target), metadata

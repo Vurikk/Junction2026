@@ -138,5 +138,55 @@ class RealAutomaticTests(TestCase):
             self.assertIsNone(automatic_budget(sample, [])['daily_eur'])
 
 
+class ChartTargetTests(TestCase):
+    def test_manual_zero_and_matching_period_precedence(self):
+        from backend.automatic_demo_budget import chart_target
+        for period in ['week', 'month']:
+            value, metadata = chart_target(customer(), [], '0.00', period)
+            self.assertEqual(value, '0.00')
+            self.assertEqual(metadata['target_source'], 'manual')
+            self.assertIsNone(metadata['target_source_period'])
+
+    def test_total_spending_exact_units_and_goal_changes(self):
+        from backend.automatic_demo_budget import chart_target
+        sample = customer()
+        monthly, metadata = chart_target(sample, [goal()], None, 'month')
+        self.assertEqual(monthly, 750)
+        weekly, _ = chart_target(sample, [goal()], None, 'week')
+        self.assertEqual(weekly, 173.07)
+        self.assertEqual(metadata['target_source'], 'automatic_historical')
+        self.assertEqual(metadata['target_source_period'], {'start': '2024-01-01', 'end': '2024-03-31'})
+        changed, _ = chart_target(sample, [goal(20)], None, 'month')
+        self.assertEqual(changed, 880)
+        for period in ['week', 'month']:
+            self.assertIsNone(chart_target(sample, [], None, period)[0])
+        sample._transactions = sample._transactions.iloc[0:0].copy()
+        self.assertIsNone(chart_target(sample, [goal()], None, 'week')[0])
+
+    def test_http_manual_zero_matching_period_and_nonmutation(self):
+        with patch.dict(os.environ, {'COACH_LLM_ENABLED': 'false'}), patch('backend.main.load_customers',
+                return_value=[customer()]), TestClient(app) as client:
+            base = '/api/customers/CUST04457'
+            for period in ['week', 'month']:
+                result = client.get(base + '/spending-history', params={'period': period}).json()
+                self.assertIsNone(result['budget_target_eur'])
+                self.assertIsNone(result['target_source'])
+            client.post(base + '/goals', json={'name': 'Trip', 'amount_eur': '1000', 'priority': 'critical'})
+            before = {k: client.get(base + '/' + k).json() for k in ['goals', 'assumptions', 'budget']}
+            for period, expected in [('week', 173.07), ('month', 750)]:
+                result = client.get(base + '/spending-history', params={'period': period}).json()
+                self.assertEqual(result['budget_target_eur'], expected)
+                self.assertEqual(result['target_source'], 'automatic_historical')
+                self.assertTrue(all(p['budget_target_eur'] == expected for p in result['periods']))
+            for key, value in before.items():
+                self.assertEqual(client.get(base + '/' + key).json(), value)
+            client.put(base + '/assumptions', json={'weekly_budget_eur': '0.00'})
+            weekly = client.get(base + '/spending-history', params={'period': 'week'}).json()
+            monthly = client.get(base + '/spending-history', params={'period': 'month'}).json()
+            self.assertEqual(weekly['target_source'], 'manual')
+            self.assertEqual(Decimal(str(weekly['budget_target_eur'])), 0)
+            self.assertEqual(monthly['target_source'], 'automatic_historical')
+
+
 if __name__ == '__main__':
     main()

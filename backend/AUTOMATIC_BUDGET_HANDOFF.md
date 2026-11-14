@@ -71,3 +71,27 @@ Includes independent monthly arithmetic for both real demo profiles, source cove
 missing/empty history, actual-day denominator, protected groceries/irregular spending, transfer/refund exclusion,
 priority/target caps, reserve shortfall, negative surplus and manual-plan/goal nonmutation.
 Source files parse and new Python lines are under150characters. No raw data committed.
+
+## Goal-driven chart target fallback
+
+Existing GET `/spending-history?period=week|month` retains budget_target_eur at top level and each period,
+plus Python-calculated remaining_budget_eur. Matching manual weekly/monthly target always wins, including explicit0.
+Without matching manual target, estimated automatic budget supplies TOTAL spending target, never extra headroom alone:
+monthly = protected_spending_eur + monthly_extra_eur;
+weekly = floor-to-cent(monthly *3 /covered_days *7). This rounds only the final weekly result, not an intermediate daily rate.
+No goals / insufficient evidence => null target. A target is recalculated from current stored goals on every read.
+
+Additive top-level metadata (not repeated on period rows):
+- target_source: manual | automatic_historical | null.
+- target_source_period: {start:ISOdate,end:ISOdate} for automatic; otherwise null.
+- target_basis: human-readable formula/provenance string (including unavailable reason).
+- target_limitations: array of retrospective limitations for automatic/unavailable; empty for manual.
+
+UI retains existing line rendering; label automatic target Estimated plan target / Historical spending benchmark,
+with source dates and note that it is a typical-period retrospective comparison, not an actual historical commitment.
+No new goal or assumption mutations. Other-period manual target is never silently converted.
+Independent oracle: monthly I1000/E600, reserve100, goals150 -> extra150; MONTHLY TOTAL target750,
+WEEKLY target floor(750*3/91*7)=173.07 (Jan-Mar2024). Goal target20 -> MONTHLY target880.
+Manual weekly0 overrides automatic weekly while monthly still falls back to automatic.
+Tests add both-unit arithmetic, target cap/goal changes, no-goal/missing states, HTTP line/period propagation,
+manual0 and cross-period precedence, plus unchanged stored goals/assumptions/budget on read.

@@ -236,7 +236,10 @@ def set_assumptions(request: Request, customer_id: str, payload: Assumptions):
 def spending_history(request: Request, customer_id: str, period: Literal["week", "month"] = "month"):
     customer = customer_for(request, customer_id)
     key = "weekly_budget_eur" if period == "week" else "monthly_budget_eur"
-    return history(customer, period, request.app.state.assumptions[customer_id][key])
+    from .automatic_demo_budget import chart_target
+    target, metadata = chart_target(customer, request.app.state.goals[customer_id],
+                                    request.app.state.assumptions[customer_id][key], period)
+    return {**history(customer, period, target), **metadata}
 
 
 @app.get("/api/customers/{customer_id}/income")
