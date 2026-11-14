@@ -1,7 +1,8 @@
 # Independent Coach integration QA
 
 Date: 14 November 2026 (Europe/Helsinki). Owner: independent QA.
-Recommendation: **NO-GO for claiming the full acceptance matrix passes.**
+Latest disposition: see the appended `f550b26` fix verification; all three targeted backend gates now pass on that hash.
+Original recommendation at `0e43cbd`: **NO-GO for claiming the full acceptance matrix passes.**
 Disabled-mode date handling and language fallback need backend disposition. Concurrency rejection remains cached.
 The final UI candidate passes the bounded mocked checks below; this is not certification of a deployed paid application.
 
@@ -231,3 +232,86 @@ not an exhaustive proof for every possible user string or future provider behavi
 
 Manager received the reproduced findings and bounded browser evidence. Keep the UI candidate available for mock demos,
 but do not describe disabled fallback as having the same date/language behavior as the validated mock-provider path.
+
+## Follow-up: independent runtime-fix verification at f550b26
+
+Exact backend: `origin/codex/coach-backend-readiness`, `f550b266d38c2a2f455650f34fba81d6e8406c38`.
+The earlier readiness commit `1039567` contained tests/documentation only; it was not treated as a fix.
+Original findings and evidence above are preserved and apply to `0e43cbd`.
+
+**QA-01, QA-02 and QA-03: PASS / fixed for the tested backend hash.**
+Recommendation: **conditional GO for a bounded paid-disabled/mock demo**, subject to a smoke check of the actual
+final UI/backend pairing. This does not claim the full original acceptance matrix or live deployment is verified.
+
+### Isolation and commands
+
+Reviewed the runtime diff, new local state implementation, browser-contract tests and QA regression tests.
+Exported exact commit bytes with `git archive --format=zip f550b266d38c2a2f455650f34fba81d6e8406c38`
+into a disposable temporary source directory using Python zipfile. No other agent checkout was changed,
+and no runtime files were copied into or committed on the QA branch.
+The same installed interpreter was used with paid mode disabled and bytecode writes disabled.
+
+```powershell
+$env:COACH_LLM_ENABLED = 'false'
+$env:PYTHONDONTWRITEBYTECODE = '1'
+# Run from the exported f550b26 source directory with the previously defined $qaPython.
+& $qaPython -m unittest backend.test_coach_language backend.test_coach_routing `
+  backend.test_coach_single_call backend.test_verda backend.test_coach_browser_contract `
+  backend.test_coach_qa_regressions -v
+```
+
+**68 tests passed**, 5.110 seconds reported by unittest. A Starlette/httpx deprecation warning remains;
+it did not fail any check. No live provider, canonical ledger, real key or original dataset was accessed.
+
+### Additional independent probes, beyond running the author's tests
+
+Executed inline Python from the exported source, importing the same fixture and mocked harness used in the original reproduction.
+For local checks, patched `backend.coach_tools.today_local` to `date(2026, 11, 14)` and patched
+`Ledger.transaction` to raise `AssertionError('paid ledger accessed')` on any access.
+Constructed a fresh `CoachLLM(unavailable_reason=reason)` and conversation for each of:
+`disabled`, `missing_configuration`, `review_required`, `pricing_review_expired`, `ledger_unavailable`.
+These inject service-unavailability reasons; they do not claim to test every environment configuration parser.
+
+For **each of those five reasons**, actual results were:
+
+1. `How much did I spend on restaurants last month?` returned `unsupported_period_or_category`, empty cards/rows.
+   No substitution to the fixture's latest May 2024 records.
+2. `Food` returned exactly `Do you mean groceries or restaurants?`.
+3. `What if I reduce restaurants in April 2024 by 20%?`, then `What about 10% instead?`, returned restaurants,
+   `source_period={start:2024-04-01,end:2024-04-30}`, baseline 400, hypothetical 360, potential reduction 40.
+4. No paid-ledger guard fired. Local results remain rule-based; provider setup is not needed for these calculations.
+
+Concurrency probe independently repeated the original held-request reproduction, with two queued mock envelopes:
+
+1. Hold A in MockTransport using an Event; B with a fixed request ID returns `concurrency_limit`.
+2. Release/await A; reset the Event; retry B with its original request/conversation/session.
+3. While B is held, identical B returns `request_in_progress`; a changed question with B's ID returns `request_conflict`.
+4. Release B: it succeeds with `mode=llm` from mocked tool selection.
+5. Completed B replay is identical. Total mocked provider requests are exactly **2**, one for A and one for B.
+
+Observed summary:
+
+```json
+{"busy":"concurrency_limit","recovered":"llm","inflight":"request_in_progress",
+ "conflict":"request_conflict","total_mock_calls":2,"completed_replay":"identical"}
+```
+
+The new regression suite additionally passed restart readmission, no readmission when any call record exists,
+rate-limit rechecking, local context expiry/bounds/isolation, request conflict and nonmutation checks.
+Reviewed browser-contract tests use FastAPI TestClient with HTTPS URL semantics and mocked transport:
+cookie attributes/bootstrap, cookie-loss isolation, and failure replay after restart all passed.
+These are HTTP-boundary tests, not a new browser-to-deployed-backend run.
+
+### Remaining limits and coordination
+
+- The `7a958eb` UI removed the concurrency retry button and describes the rejection as final.
+  The fixed backend now allows safe same-ID readmission, so that wording/recovery affordance is stale for the new pairing.
+  This does not cause duplicate calls; backend recovery is verified through direct requests only.
+  Manager informed. No frontend changes made by QA.
+- UI owner separately reported full-app paid-disabled checks at `7a958eb`: mobile layouts, popup entries,
+  both profiles, charts, preview/discard and one explicit goal save. These remain owner-reported evidence,
+  not independent QA results. The owner then announced additional weekly-chart/Home-goal changes;
+  their incoming commit is outside this backend verification.
+- No new browser work duplicated the UI owner's checks. No fresh production build, full original-data suite,
+  physical keyboard, live provider or combined final-candidate deployment check was performed here.
+- No merge or paid activation performed. Manager received exact hash, PASS evidence and conditional recommendation.
