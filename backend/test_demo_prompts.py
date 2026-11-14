@@ -2,6 +2,9 @@
 
 import json
 import os
+from pathlib import Path
+import tempfile
+from uuid import uuid4
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
@@ -10,6 +13,8 @@ import pandas as pd
 from fastapi.testclient import TestClient
 
 from backend.coach_llm import CoachLLM
+from backend.coach_ledger import Ledger
+from backend.verda import identity
 from backend.coach_tools import expected_selection, run_tool, sanitize_question
 from backend.demo_prompts import demo_prompts
 from backend.main import app
@@ -93,8 +98,10 @@ class DemoPromptTests(unittest.TestCase):
                 for name, value in before.items():
                     self.assertEqual(client.get(base + '/' + name).json(), value)
 
-    def test_common_demo_guidance_never_uses_provider_or_ledger(self):
+    def test_common_demo_guidance_never_uses_provider_or_reservations(self):
         ledger = Mock()
+        ledger.conversation.return_value = None
+        ledger.claim.return_value = None
         provider = SimpleNamespace(settings=SimpleNamespace(ledger=ledger), complete=AsyncMock(), close=AsyncMock())
         service = CoachLLM(provider)
         questions = ['How can I save money?', 'How can I save?', 'Where can I save money?',
@@ -105,18 +112,80 @@ class DemoPromptTests(unittest.TestCase):
             with TestClient(app) as client:
                 base = '/api/customers/CUST04457'
                 before = {name: client.get(base + '/' + name).json() for name in ('goals', 'assumptions', 'budget')}
+                boot = client.post(base + '/coach', json={'question': 'Spending by category'}).json()
                 for question in questions:
                     with self.subTest(question=question):
-                        result = client.post(base + '/coach', json={'question': question}).json()
+                        result = client.post(base + '/coach', json={'question': question,
+                            'conversation_id': boot['conversation_id'], 'request_id': str(uuid4())}).json()
                         self.assertEqual(result['mode'], 'rule_based')
                         self.assertEqual(result['fallback_reason'], 'demo_guidance')
                         self.assertEqual(result['kind'], 'help')
                         self.assertTrue(result['text'])
                         self.assertEqual(result['cards'], [])
                 provider.complete.assert_not_awaited()
-                self.assertEqual(ledger.mock_calls, [])
+                ledger.reserve.assert_not_called()
+                self.assertEqual(ledger.finish.call_count, len(questions))
                 for name, value in before.items():
                     self.assertEqual(client.get(base + '/' + name).json(), value)
+
+
+class GuidanceIdentityTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.ledger = Ledger.initialize(Path(self.directory.name) / 'usage.sqlite3', identity())
+        self.provider = SimpleNamespace(settings=SimpleNamespace(ledger=self.ledger),
+                                        complete=AsyncMock(side_effect=AssertionError('No provider call allowed')))
+        self.service = CoachLLM(self.provider)
+        self.conversation = str(uuid4())
+        self.customer = fixture()
+
+    async def ask(self, question, request_id, *, session='browser', customer=None):
+        return await self.service.respond(customer or self.customer, question, self.conversation,
+                                          request_id, session, {'kind': 'help', 'text': 'Fallback', 'rows': []})
+
+    async def test_guidance_replay_conflicts_and_owner_checks(self):
+        request_id = str(uuid4())
+        first = await self.ask('How can I save money?', request_id)
+        self.assertEqual(first['fallback_reason'], 'demo_guidance')
+        self.assertEqual(await self.ask('How can I save money?', request_id), first)
+        for question in ['Where can I save money?', 'Reduce restaurants in April 2024 by 20%']:
+            conflict = await self.ask(question, request_id)
+            self.assertEqual(conflict['fallback_reason'], 'request_conflict')
+        for kwargs in [{'session': 'other-browser'}, {'customer': fixture('CUST00001')}]:
+            denied = await self.ask('How can I save money?', str(uuid4()), **kwargs)
+            self.assertEqual(denied['fallback_reason'], 'conversation_mismatch')
+        self.provider.complete.assert_not_awaited()
+        self.assertEqual(self.ledger.spent(), 0)
+        with self.ledger.transaction() as (db, _):
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM requests').fetchone()[0], 1)
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM calls').fetchone()[0], 0)
+
+    async def test_guidance_cannot_replace_an_existing_calculation_identity(self):
+        # Ambiguous financial request is a durable, zero-cost receipt in the normal paid-capable path.
+        request_id = str(uuid4())
+        original = await self.ask('Food', request_id)
+        self.assertEqual(original['fallback_reason'], 'clarification_needed')
+        denied = await self.ask('How can I save money?', request_id)
+        self.assertEqual(denied['fallback_reason'], 'request_conflict')
+        self.assertEqual(await self.ask('Food', request_id), original)
+        self.provider.complete.assert_not_awaited()
+        self.assertEqual(self.ledger.spent(), 0)
+
+    async def test_disabled_guidance_keeps_local_identity_and_reduction_context(self):
+        self.service = CoachLLM()
+        first = await self.ask('Reduce restaurants in April 2024 by 20%', str(uuid4()))
+        self.assertEqual(first['cards'][0]['data']['potential_reduction_eur'], 80)
+        request_id = str(uuid4())
+        guidance = await self.ask('How can I save money?', request_id)
+        self.assertEqual(guidance['fallback_reason'], 'demo_guidance')
+        self.assertEqual(await self.ask('How can I save money?', request_id), guidance)
+        conflict = await self.ask('Where can I save money?', request_id)
+        self.assertEqual(conflict['fallback_reason'], 'request_conflict')
+        denied = await self.ask('How can I save money?', str(uuid4()), session='other-browser')
+        self.assertEqual(denied['fallback_reason'], 'conversation_mismatch')
+        followup = await self.ask('What about 10% instead?', str(uuid4()))
+        self.assertEqual(followup['cards'][0]['data']['potential_reduction_eur'], 40)
 
 
 if __name__ == '__main__':

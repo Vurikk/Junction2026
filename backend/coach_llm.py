@@ -46,7 +46,7 @@ class CoachLLM:
         if self.provider:
             await self.provider.close()
 
-    def local_response(self, customer, clean, conversation_id, request_id, session, response):
+    def local_response(self, customer, clean, conversation_id, request_id, session, response, guidance=None):
         """Same grounded Python tools without a provider, credentials or persistent billing state."""
         owner, customer_scope = digest(session), digest(customer.customer_id)
         key = digest(owner + ':' + customer_scope + ':' + request_id)
@@ -58,13 +58,16 @@ class CoachLLM:
             if cached is not None:
                 return cached
             claimed = True
-            selected = expected_selection(clean, previous, customer)
-            card = run_tool(customer, selected)
-            facts = facts_for(card)
-            response.update(cards=[card], rows=[], fallback_reason=self.reason,
-                            kind={'category_reduction': 'scenario', 'category_spending': 'categories',
-                                  'spending_comparison': 'average'}[card['type']],
-                            text=' '.join([facts['summary'], *(value for key, value in facts.items() if key != 'summary')]))
+            if guidance is not None:
+                response.update(kind='help', text=guidance, rows=[], fallback_reason='demo_guidance')
+            else:
+                selected = expected_selection(clean, previous, customer)
+                card = run_tool(customer, selected)
+                facts = facts_for(card)
+                response.update(cards=[card], rows=[], fallback_reason=self.reason,
+                                kind={'category_reduction': 'scenario', 'category_spending': 'categories',
+                                      'spending_comparison': 'average'}[card['type']],
+                                text=' '.join([facts['summary'], *(value for key, value in facts.items() if key != 'summary')]))
         except GateError as error:
             reason = str(error)
             text = 'This conversation or request is unavailable. Start a new conversation.'
@@ -86,19 +89,18 @@ class CoachLLM:
         if scenario:
             return {**response, 'fallback_reason': 'goal_preview'}
         guidance = demo_guidance(question, customer)
-        if guidance is not None:
-            return {**response, 'kind': 'help', 'text': guidance, 'rows': [], 'fallback_reason': 'demo_guidance'}
         if baseline.get('kind') in {'goals', 'mortgage', 'unknown'}:
             return {**response, 'fallback_reason': 'unsupported_topic' if self.provider else self.reason}
         try:
-            clean = sanitize_question(question)
+            clean = (json.dumps({'intent': 'demo_guidance', 'question_digest': digest(question)})
+                     if guidance is not None else sanitize_question(question))
         except GateError:
             if baseline.get('kind') == 'allowance':
                 return {**response, 'fallback_reason': 'unsupported_topic' if self.provider else self.reason}
             return {**response, 'kind': 'help', 'rows': [], 'text': 'Please use a short financial question without personal details.',
                     'fallback_reason': 'privacy_blocked'}
         if not self.provider:
-            return self.local_response(customer, clean, conversation_id, request_id, session, response)
+            return self.local_response(customer, clean, conversation_id, request_id, session, response, guidance)
         if bootstrap:
             return {**response, 'fallback_reason': 'session_initialized'}
         if not identified:
@@ -117,28 +119,31 @@ class CoachLLM:
             if cached is not None:
                 return cached
             claimed = True
-            if self.lock.locked():
-                raise GateError('concurrency_limit')
-            async with self.lock:
-                async with asyncio.timeout(max(0, deadline - time.monotonic())):
-                    # Ambiguous requests must not pay for a model guess. The legacy keyword Coach treats
-                    # "weekly" as allowance; validated spending intent, rather than that label, owns routing.
-                    expected = expected_selection(clean, previous, customer)
-                    # Check data availability locally too; an unsupported period/category needs no paid request.
-                    candidate_card = run_tool(customer, expected)
-                    context = routing_context(customer, previous)
-                    messages = [{'role': 'system', 'content': ROUTER_PROMPT},
-                                {'role': 'user', 'content': json.dumps({'question': clean, 'context': context})}]
-                    routing = await self.provider.complete(key + ':1', messages, tools=TOOLS, deadline=deadline)
-                    selected = selection(routing, clean, previous, customer)
-                    card = candidate_card  # selection must match the already validated local request exactly.
-                    response['cards'] = [card]
-                    facts = facts_for(card)
-                    # Summary first, followed by every Python fact, including all required caveats.
-                    text = ' '.join([facts['summary'], *(value for key, value in facts.items() if key != 'summary')])
-                    # llm identifies validated tool selection, not model-generated financial advice.
-                    response.update(kind={'category_reduction': 'scenario', 'category_spending': 'categories',
-                                          'spending_comparison': 'average'}[card['type']], text=text, rows=[], mode='llm')
+            if guidance is not None:
+                response.update(kind='help', text=guidance, rows=[], fallback_reason='demo_guidance')
+            else:
+                if self.lock.locked():
+                    raise GateError('concurrency_limit')
+                async with self.lock:
+                    async with asyncio.timeout(max(0, deadline - time.monotonic())):
+                        # Ambiguous requests must not pay for a model guess. The legacy keyword Coach treats
+                        # "weekly" as allowance; validated spending intent, rather than that label, owns routing.
+                        expected = expected_selection(clean, previous, customer)
+                        # Check data availability locally too; an unsupported period/category needs no paid request.
+                        candidate_card = run_tool(customer, expected)
+                        context = routing_context(customer, previous)
+                        messages = [{'role': 'system', 'content': ROUTER_PROMPT},
+                                    {'role': 'user', 'content': json.dumps({'question': clean, 'context': context})}]
+                        routing = await self.provider.complete(key + ':1', messages, tools=TOOLS, deadline=deadline)
+                        selected = selection(routing, clean, previous, customer)
+                        card = candidate_card  # selection must match the already validated local request exactly.
+                        response['cards'] = [card]
+                        facts = facts_for(card)
+                        # Summary first, followed by every Python fact, including all required caveats.
+                        text = ' '.join([facts['summary'], *(value for key, value in facts.items() if key != 'summary')])
+                        # llm identifies validated tool selection, not model-generated financial advice.
+                        response.update(kind={'category_reduction': 'scenario', 'category_spending': 'categories',
+                                              'spending_comparison': 'average'}[card['type']], text=text, rows=[], mode='llm')
         except TimeoutError:
             response['fallback_reason'] = 'timeout'
         except GateError as error:
