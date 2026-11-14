@@ -17,13 +17,16 @@ const fields = [
 
 export default function PlanningForm({ customer, assumptions, api, money, busy, onSave }) {
   const [days, setDays] = useState(String(assumptions.horizon_days));
-  const [values, setValues] = useState(() => Object.fromEntries(fields.map(([key]) => [key, assumptions[key] ?? ''])));
+  const [values, setValues] = useState(() => Object.fromEntries(fields.map(([key]) => [key, ''])));
+  const [reserveMonths, setReserveMonths] = useState(3);
+  const selectedMonths = useRef(3);
+  const [customReserve, setCustomReserve] = useState(false);
   const [defaults, setDefaults] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [review, setReview] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const edited = useRef(new Set(fields.filter(([key]) => assumptions[key] != null).map(([key]) => key)));
+  const edited = useRef(new Set());
   useEffect(() => {
     const controller = new AbortController();
     setDefaults(null); setError(''); setLoading(true); setConfirmed(false);
@@ -36,6 +39,10 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
           confirmed_income_eur: edited.current.has('confirmed_income_eur') ? old.confirmed_income_eur : result.income.amount_eur ?? '',
           upcoming_essential_bills_eur: edited.current.has('upcoming_essential_bills_eur')
             ? old.upcoming_essential_bills_eur : result.bills.total_eur ?? '',
+          everyday_spending_eur: edited.current.has('everyday_spending_eur')
+            ? old.everyday_spending_eur : result.everyday?.amount_eur ?? '',
+          emergency_reserve_eur: edited.current.has('emergency_reserve_eur') ? old.emergency_reserve_eur
+            : result.reserve?.options.find(option => option.months === selectedMonths.current)?.amount_eur ?? '',
         }));
       }).catch(e => { if (!controller.signal.aborted) setError(e.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -44,11 +51,33 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
   const balance = defaults?.balance;
   const unavailable = loading || balance?.amount_eur == null;
   function edit(key, value) {
+    if (key === 'emergency_reserve_eur') setCustomReserve(true);
     edited.current.add(key); setConfirmed(false); setValues(old => ({ ...old, [key]: value }));
   }
   function input([key, label, hint]) {
     return <React.Fragment key={key}><label htmlFor={key}>{label} (€)</label><p className="fine">{hint}</p>
       {key === 'confirmed_income_eur' && <p className="fine">{defaults?.income.note}</p>}
+      {key === 'everyday_spending_eur' && <div>
+        <p>Recorded daily average: {money(defaults?.everyday?.daily_average_eur)}.</p>
+        <p className="fine">{defaults?.everyday?.note} The amount below covers the whole plan and excludes housing, utilities and food.</p>
+      </div>}
+      {key === 'emergency_reserve_eur' && <div>
+        <label htmlFor="reserve-months">Emergency reserve target: {reserveMonths} months{customReserve ? ' (custom amount below)' : ''}</label>
+        <input id="reserve-months" type="range" min="1" max="12" step="1" value={reserveMonths}
+          onChange={event => {
+            const months = Number(event.target.value);
+            selectedMonths.current = months; setReserveMonths(months); setCustomReserve(false);
+            edited.current.delete('emergency_reserve_eur'); setConfirmed(false);
+            setValues(old => ({ ...old,
+              emergency_reserve_eur: defaults?.reserve?.options.find(option => option.months === months)?.amount_eur ?? '',
+            }));
+          }} />
+        <p className="fine">Start with three months, or choose 1–12 months or enter your own amount below.
+          {defaults?.reserve?.note}</p>
+        <p>This is a suggested target, not money already held. It is not capped to your recorded balance.</p>
+        {!customReserve && defaults?.reserve?.options.find(option => option.months === reserveMonths)?.exceeds_balance &&
+          <p role="status">This reserve target exceeds your recorded balance. Review what you can actually protect before confirming.</p>}
+      </div>}
       {key === 'upcoming_essential_bills_eur' && defaults && <div>
         {defaults.bills.items.map(item => <div className="row" key={item.label}>
           <span>{item.label}</span><b>{money(item.amount_eur)}</b></div>)}
@@ -77,6 +106,8 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
             setValues(old => ({ ...old,
               confirmed_income_eur: edited.current.has('confirmed_income_eur') ? old.confirmed_income_eur : '',
               upcoming_essential_bills_eur: edited.current.has('upcoming_essential_bills_eur') ? old.upcoming_essential_bills_eur : '',
+              everyday_spending_eur: edited.current.has('everyday_spending_eur') ? old.everyday_spending_eur : '',
+              emergency_reserve_eur: edited.current.has('emergency_reserve_eur') ? old.emergency_reserve_eur : '',
             }));
           }} />
         {fields.slice(5).map(input)}
@@ -84,7 +115,7 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
           onChange={() => setConfirmed(false)} />I expect to have the same money available and put the same amount towards goals each time this plan repeats.</label>
       </details>
       <p>Your plan covers {days || 'an unknown number of'} days.</p>
-      {review && <p role="status">Plan length changed. Automatic estimates reload; saved amounts and your edits remain.
+      {review && <p role="status">Plan length changed. Automatic estimates reload; your current edits remain.
         Review every retained amount for the new period.</p>}
       <label>Latest recorded balance (read-only)</label><p><strong>{money(balance?.amount_eur)}</strong></p>
       {balance?.recorded_at && <p>Recorded on {readableDate(balance.recorded_at)}</p>}
