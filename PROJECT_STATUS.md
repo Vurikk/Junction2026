@@ -22,6 +22,11 @@ Product clarification: the core is AI-assisted understanding of money consumptio
 The user reports S-mobiili already has Säästäjä; goals support explanations and scenarios rather than define the whole app.
 Spending exploration must work without creating a goal. The goal-first journey below applies only to goal planning.
 UI direction: closely reproduce the S-mobiili visual structure from user-provided screenshots, then integrate our Coach.
+Latest requested Home layout: Balance → Financial coach overview → text-only estimated spending allowance
+→ See where it went. Keep charts on Spending and goals secondary. UI refinement sent to the existing UI agent.
+Never relabel spending_eur as Balance; missing balance/comparison contracts require honest unavailable states.
+Conversational budget planning with embedded goals is proposed, not implemented or fully specified.
+Reuse supported rent/food history, but mortgage applications cannot establish repayments; ask only necessary follow-ups.
 UI agent reports screenshots received; do not treat screenshot amounts as customer data.
 Present the result as a Junction concept/demo, not an official production banking app.
 Show the three baskets in plain language (regular bills, unexpected essentials, everyday spending), with uncertainty visible.
@@ -37,6 +42,14 @@ For work across PCs, handoffs should identify the GitHub branch, base commit, ch
 UI workstream reports started on codex/s-mobiili-ui from 65e4e80, with screenshots received.
 It owns frontend/src/main.jsx, frontend/src/Coach.jsx and frontend/src/style.css, plus a separate handoff document.
 This chat owns PROJECT_STATUS.md. No agent launched from this chat; branch changes have not yet been reviewed.
+Ownership clarification: codex/s-mobiili-ui is the LOCAL UI agent, not the friend's remote agent.
+The friend's agent on the second PC is assigned backend data/Coach work on codex/data-backed-budget.
+Do not assign competing backend implementation to local Agent 2 while the friend owns that work.
+Local UI handoff commit: 1fe7eaf (not merged). Build/mobile checks are agent-reported, not a completed PM review.
+Immediate backend priorities: expose dated recorded balances, a structured spending comparison and data-derived
+planning suggestions with missing-input explanations. Preserve confirmed planning semantics and existing API callers.
+After these unblock Home, implement the read-only category-reduction scenario. No frontend edits in this workstream.
+Home chart placement needs UI follow-up: text-only allowance does not prohibit a separate spending chart on Home.
 UI work should use a separate branch, preserve agreed API contracts and avoid backend edits without coordination.
 Before its implementation handoff, provide reference screenshots and a shared base commit; review its diff before integration.
 Coordinate ownership of main.jsx, Coach.jsx and style.css to avoid overlapping UI changes across workstreams.
