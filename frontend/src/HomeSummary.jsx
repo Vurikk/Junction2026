@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { chartPeriods } from './chartPeriods';
+import SafeToSpend from './SafeToSpend';
 
 const date = value => value ? value.slice(0, 10) : 'Date unavailable';
 
-export default function HomeSummary({ data, money, openCoach, onSpending, onPlan, onAddGoal, onTarget }) {
-  const [range, setRange] = useState('Today');
+export default function HomeSummary({ data, money, openCoach, onSpending, onPlan, onAddGoal, onTarget, customer, api, refreshKey }) {
   const balances = data['recorded-balances'];
   const comparison = data['spending-comparison'];
   const budget = data.budget;
@@ -13,7 +13,6 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
   const points = chartPeriods(history);
   const headlines = { below: 'Spending below your usual', above: 'Spending above your usual', equal: 'Spending matches your usual' };
   const headline = headlines[comparison?.status] || 'Let’s explore your spending';
-  const allowance = range === 'Today' ? budget?.daily_eur : budget?.weekly_eur;
   return <>
     <div className="money-card">
     <section className="recorded-balance"><h1>Balance</h1>
@@ -29,17 +28,8 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
         <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M12 1 15 9 23 12 15 15 12 23 9 15 1 12 9 9Z" /></svg>Ask Coach</button>
     </section>
-    <section className="allowance-summary"><div className="allowance-heading"><h2>Safe to spend</h2>
-      <div className="allowance-toggle">{['Today', 'Week'].map(value =>
-        <button key={value} aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}</div></div>
-      <strong className="allowance-amount">{money(allowance)}</strong>
-      <p className="fine">Estimated {range === 'Today' ? 'per day' : 'per week'}</p>
-      <div className="allowance-track" aria-hidden="true" />
-      <p className="fine">Usage tracking unavailable</p>
-      <button className="text-button" onClick={onPlan} disabled={!data.assumptions}>
-        {allowance == null ? 'Complete your spending plan' : 'Review your spending plan'} ›</button>
-      {budget?.shortfall_eur > 0 && <p role="alert">Bills and reserve shortfall: {money(budget.shortfall_eur)}</p>}
-    </section>
+    <SafeToSpend customer={customer} api={api} money={money} budget={budget} assumptions={data.assumptions}
+      onPlan={onPlan} refreshKey={refreshKey} />
     </div>
     <details className="money-details"><summary>Details</summary>
       <h3>Balance source</h3>
@@ -57,11 +47,10 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
           {comparison?.baseline?.period_count != null && `${comparison.baseline.period_count} prior periods.`}</p>
         <p>{comparison?.note || comparison?.insufficient_data_reason || 'Comparison data is unavailable.'}</p>
         <p>Rule-based demo. Historical spending is not a measure of goal progress.</p>
-      <h3>Estimate details</h3>
+      <h3>Confirmed plan details</h3>
         <p>{budget?.status === 'estimated' ? `Based on your confirmed ${budget.assumptions.horizon_days}-day plan.`
           : 'All six planning amounts need confirmation. Blank amounts remain unknown.'}</p>
-        <p>Includes everyday costs. Today selects the daily estimate, not a live remaining balance. Payment timing is not modeled.
-          No consumed fraction is available, so the neutral track does not show progress.</p>
+        <p>Includes everyday costs. Day selects a daily estimate, not a live remaining balance. Payment timing is not modeled.</p>
     </details>
     </div>
     <section className="home-current-goals"><div className="section-title"><h2>Current goals</h2>

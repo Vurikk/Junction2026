@@ -33,7 +33,7 @@ const zero = render({
 });
 assert.equal((zero.match(/EUR 0.00/g) || []).length, 2);
 assert.match(zero, /2026-09-30/);
-assert.match(zero, /Usage tracking unavailable/);
+assert.doesNotMatch(zero, /allowance-track|Usage tracking unavailable/);
 
 const separate = render({ 'recorded-balances': {
   simultaneous_total_eur: null,

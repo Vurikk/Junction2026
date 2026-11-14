@@ -171,6 +171,12 @@ footer { color: #606b63; }
 .allowance-summary > p { margin: 5px 0; }
 .allowance-track { height: 9px; border-radius: 20px; background: #e0e5e1; margin: 12px 0 8px; }
 .allowance-summary > .text-button { font-size: 13px; text-align: left; }
+.estimate-form { margin-top: 12px; }
+.estimate-form fieldset { border: 0; padding: 0; min-width: 0; }
+.estimate-form legend { font-weight: bold; font-size: 15px; }
+.estimate-form label { font-size: 13px; }
+.estimate-form .fine { margin: 6px 0; }
+.estimate-form details { margin: 12px 0; }
 .home-chart h2 { font-size: 19px; }
 .home-current-goals h2 { font-size: 19px; margin: 0; }
 .home-current-goals .section-title { align-items: center; }

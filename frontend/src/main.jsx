@@ -176,6 +176,7 @@ function App() {
       {!customer && !error && <p role="status">Loading your profiles…</p>}
       {page === 'Home' && <>
         <HomeSummary key={customer} data={data} money={money} openCoach={openCoach} onSpending={() => setPage('Spending')}
+          customer={customer} api={api} refreshKey={`${reload}-${data.goals?.map(goal => goal.id).join(',')}`}
           onAddGoal={() => { setPage('Goals'); setFocusGoal(true); }}
           onTarget={openTarget}
           onPlan={() => {

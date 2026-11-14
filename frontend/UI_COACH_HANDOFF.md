@@ -139,3 +139,37 @@ Coach empty-state now has a brief static local introduction, not a stored chat t
 Browser checked first open, empty reopen retains draft without duplicate intro, nonempty reopen has no intro,
 and customer switch gets a fresh empty intro. Session/bootstrap helper unchanged and tests pass.
 Build, Home rendering,8-week selection, Coach session and whitespace checks passed. No paid/provider calls.
+
+## Data-backed Safe to spend UI
+
+Paired backend:86d657f4bff79a7d281fe1539cf2d426a2bb9b86, archived into a new temporary directory,
+COACH_LLM_ENABLED=false explicitly, synthetic data, one worker, port8028. UI preview5189 targets only8028.
+New SafeToSpend.jsx uses additive GET/POST spending-estimate; POST is read-only and never calls assumptions PUT.
+Current default7-day preview asks only available current funds, reserve and TOTAL bills actually due.
+Prorated historical bills are shown with source dates as context, not automatically accepted as bills due now.
+Optional details allow everyday-cost override, explicit goal set-aside, horizon and explicitly labelled historical mode.
+Backend goal_policy is visible, including no money set aside when omitted. Future income is never added by UI.
+All amounts come from Python. No progress fill. Existing complete confirmed budget takes display precedence;
+partial/manual assumptions stay untouched and the full advanced plan remains accessible separately.
+Customer change aborts requests and resets draft; read-only drafts reset when leaving Home or refreshing.
+Initial-load errors offer retry; calculation failures hide stale numeric results. Pending requests prevent duplicate calculation.
+
+Changed: src/SafeToSpend.jsx(new), HomeSummary.jsx, main.jsx, style.css; qa/check-home.cjs,
+qa/check-safe-spend.cjs(new), estimate-harness.html/jsx(new), safe-spend-360.jpg,
+safe-spend-historical-390.jpg; this handoff. No backend files/dependencies changed or branches merged.
+
+Verified browser360/390 on actual paired API: both customers, three required current fields, blank returns unavailable,
+1000funds/100reserve/700bills ->28.57daily/199.99weekly; explicit0/0/0 ->0 rather than unknown;
+customer isolation; historical mode required explicit other-bills confirmation and showed dated scenario label;
+optional50EUR goal contribution passed to backend (no saved goals existed, no allocation claimed by frontend).
+Complete confirmed7-day plan displayed instead of preview. A temporary manual-plan fixture was restored immediately
+from exact prior state after checking values still matched. Both customers ended with original null monetary assumptions,
+horizon30/repeatfalse, and empty goals. No test amounts remain in the delivered browser or persisted backend state.
+Weekly chart still8bars; Coach goal preview/discard works without save. No new goal was created during this pass.
+Offline fixture checks covered errors/retry, disabled submissions, and abort-ignoring delayed response after customer switch.
+Build, Safe-to-spend manual/null/zero render check, Home check,8-week check, Coach-session checks and diff check pass.
+Existing bundle-size warning remains. No physical keyboard or saved-goal allocation UI test performed in this pass;
+backend allocation behavior is separately tested by its owner/independent QA. No paid/provider call occurred.
+
+Current preview: http://127.0.0.1:5189 (earlier5188 lacks spending-estimate endpoint; use5189 for this feature).
+Screenshots show ephemeral sample inputs solely as test evidence; live preview has been reset to honest unavailable state.
