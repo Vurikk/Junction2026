@@ -64,6 +64,10 @@ def recorded_balances(customer, as_of=None):
     # Do not silently substitute an older balance for that missing observation.
     if {"bank_account_id", "balance_after_eur", "tx_timestamp"}.issubset(rows.columns):
         latest = customer.get_account_balances()
+    elif "bank_account_id" in rows:
+        # Preserve known fields when a source column is absent; missing values stay unknown.
+        latest = rows.groupby("bank_account_id", sort=False).tail(1).set_index("bank_account_id")
+        latest = latest.reindex(columns=["tx_timestamp", "balance_after_eur"])
     else:
         latest = pd.DataFrame()
     ids = rows.bank_account_id.dropna().unique() if "bank_account_id" in rows else []

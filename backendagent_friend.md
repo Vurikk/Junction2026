@@ -3,7 +3,7 @@
 Updated: 2026-11-14 (Europe/Helsinki)
 Owner: backend agent
 Working branch: `codex/data-backed-budget`
-Status: delivered backend features; allowance-progress policy awaits manager review.
+Status: backend restaurant demo verified for both original profiles; 30 tests pass. Allowance-progress policy remains deferred.
 
 ## How to use this file
 
@@ -23,13 +23,85 @@ Do not interpret a proposal as approved policy. Coordinate API changes with the 
   - `POST /category-reduction`: dated, read-only hypothetical reductions; no goal mutation.
 - All 28 backend tests passed against the two supplied datasets and synthetic cases, including existing HTTP workflows.
 - User reports these changes are integrated into the UI branch and its 28 tests pass.
-- UI agent is connecting balances, comparisons and suggestions. Treat those contracts as frozen pending coordination.
+- UI agent is now connecting `/category-reduction` to Coach. All published contracts remain frozen pending coordination.
 - No frontend files were edited by this backend agent. The existing six-input allowance formula is unchanged.
 
 Contracts and original-data audit: [backend/DATA_COACH_HANDOFF.md](backend/DATA_COACH_HANDOFF.md).
 API reference: [backend/API.md](backend/API.md).
 
-## Current task: spending-allowance progress bar
+## Current task: dependable restaurant-reduction demo
+
+Verified on 2026-11-14 using the actual supplied datasets through the Python endpoint, then pinned in isolated real-HTTP tests.
+Use these exact periods; the latest overall month does not necessarily contain restaurant purchases.
+
+1. Select the customer, open Coach's category-reduction control, and choose the month/category below.
+2. Enter 20%. Show the source dates, baseline, hypothetical spending and **potential spending reduction**.
+3. Repeat the request or switch customer and use that customer's month. Existing goals, inputs and allowances stay unchanged.
+4. Show that 0% changes nothing and 100% reduces the hypothetical amount to zero. Neither result is actual saved money.
+
+Exact requests (same relative paths through the Vite proxy or the Python API at `http://127.0.0.1:8000`):
+
+```http
+POST /api/customers/CUST04457/category-reduction
+Content-Type: application/json
+
+{"category":"Restaurants","period":"month","period_start":"2026-07-01","reduction_percent":20}
+```
+
+```http
+POST /api/customers/CUST00001/category-reduction
+Content-Type: application/json
+
+{"category":"Restaurants","period":"month","period_start":"2026-09-01","reduction_percent":20}
+```
+
+Both return HTTP 200, `category: "restaurants"`, `read_only: true`, `goal_impact: null`, and EUR amounts:
+
+| Customer | Recorded source period | Reduction | Baseline | Hypothetical spending | Potential reduction |
+| --- | --- | --- | --- | --- | --- |
+| CUST04457 | 2026-07-01 to 2026-07-31 | 0% | 95.04 | 95.04 | 0.00 |
+| CUST04457 | 2026-07-01 to 2026-07-31 | 20% | 95.04 | 76.03 | 19.01 |
+| CUST04457 | 2026-07-01 to 2026-07-31 | 100% | 95.04 | 0.00 | 95.04 |
+| CUST00001 | 2026-09-01 to 2026-09-30 | 0% | 225.70 | 225.70 | 0.00 |
+| CUST00001 | 2026-09-01 to 2026-09-30 | 20% | 225.70 | 180.56 | 45.14 |
+| CUST00001 | 2026-09-01 to 2026-09-30 | 100% | 225.70 | 0.00 | 225.70 |
+
+The response amount keys are `baseline_spending_eur`, `hypothetical_spending_eur`, and `potential_reduction_eur`.
+`source_period` contains the table's inclusive start/end dates. JSON numbers need not retain trailing zeroes.
+
+**Important demo trap:** CUST04457 has no recorded Restaurants purchases in August 2026. That request correctly returns 404.
+Use July for this customer. Do not display an absent category as zero or silently relabel an older month as the latest month.
+
+### Verification and bug review
+
+- Full suite: **30 tests passed** using both original datasets, synthetic cases and an isolated Uvicorn HTTP server.
+- Exact 0%, 20%, 100%, then repeated 20% responses are asserted for both demo customers.
+- These run after creating goals and confirming a nonzero plan: goals, assumptions and budget/allowances remain identical.
+  Both the selected customer's state and the other customer's state are checked after successful and rejected requests.
+- -1%, 101%, NaN, Infinity and excess decimal precision are rejected with 422 (synthetic/API coverage as applicable).
+- Omitted/blank category or required period fields return 422. Unknown/unrecorded category returns 404.
+- October 2024 is incomplete for both source files: `period_start: "2024-10-01"` returns 422.
+  Misaligned, out-of-coverage and incomplete periods remain rejected; no extrapolation is performed.
+- Reproduced and fixed one balance fallback bug: an absent `balance_after_eur` column erased an available timestamp.
+  It now preserves that timestamp/age while balance stays null, status unavailable, and simultaneous total null.
+  The regression test failed before the fix and passes afterward. Response keys/types and financial policy are unchanged.
+- Reviewed comparison/suggestion date boundaries and exclusions. Added a focused year-boundary/leap-day case with a missing
+  category and transfers/investments: partial edge months are excluded, amounts reconcile and suggestions stay unconfirmed.
+  Existing tests cover missing/zero balances, differing timestamps, equal spending, insufficient history and rounding.
+- No additional verified comparison/suggestion bug was found. No allowance-progress implementation or new feature was added.
+
+Reproduce from the backend checkout with `SBANK_DATA_DIR` set to the supplied original dataset folder:
+
+```powershell
+.venv/Scripts/python.exe -m unittest backend.test_financial backend.test_coach backend.test_api backend.test_integration backend.test_data_coach -v
+```
+
+Known limits: coverage is not guaranteed complete; restaurant reductions are historical hypotheticals, never actual savings.
+Goal impact remains unavailable; no progress or live remaining allowance is inferred. Frontend/browser integration is owned by the UI agent.
+Verification used isolated app/server instances; the interactive server was not restarted or its in-memory state reset.
+Restart the backend when ready to load the missing-column fix; restarting clears its in-memory goals and inputs.
+
+## Deferred task: spending-allowance progress bar
 
 Request: Today/Week, amount remaining, and a horizontal fill bar.
 Investigation/proposal only was authorized; no new financial policy has been implemented.
@@ -75,8 +147,8 @@ No existing contracts should change merely to make the bar look populated.
 ## Local work and operational notes
 
 - `backend/ALLOWANCE_PROGRESS_PROPOSAL.md` and this handoff are maintained on `codex/data-backed-budget` for manager review.
-- This documentation delivery does not merge into main or implement policy. Runtime code remains at the verified backend commit.
-- No new runtime tests were run for documentation-only work; the 28-test result belongs to the delivered implementation.
+- Current delivery is a contract-preserving balance fix, focused regression coverage and the demo recipe; no main merge.
+- Latest verification is 30 passing tests; the original feature delivery had 28 passing tests.
 - Original datasets are available outside the backend worktree via `SBANK_DATA_DIR`; never commit them or raw records.
 - On this Windows host, sandbox loopback setup blocked asyncio tests; the full suite passed outside the sandbox.
 - The installed Starlette version emitted a TestClient/httpx deprecation warning; it did not fail tests.
@@ -86,3 +158,5 @@ No existing contracts should change merely to make the bar look populated.
 ## Manager decisions / backend acknowledgements
 
 - 2026-11-14: Awaiting manager review of the allowance-progress proposal. No approval recorded yet.
+
+- 2026-11-14: Prioritize Coach restaurant-reduction demo; allowance-progress proposal remains unimplemented.
