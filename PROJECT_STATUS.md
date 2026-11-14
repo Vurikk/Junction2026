@@ -22,7 +22,7 @@ Product clarification: the core is AI-assisted understanding of money consumptio
 The user reports S-mobiili already has Säästäjä; goals support explanations and scenarios rather than define the whole app.
 Spending exploration must work without creating a goal. The goal-first journey below applies only to goal planning.
 UI direction: closely reproduce the S-mobiili visual structure from user-provided screenshots, then integrate our Coach.
-Screenshots are pending; do not invent existing S-mobiili screens or treat screenshot amounts as customer data.
+UI agent reports screenshots received; do not treat screenshot amounts as customer data.
 Present the result as a Junction concept/demo, not an official production banking app.
 Show the three baskets in plain language (regular bills, unexpected essentials, everyday spending), with uncertainty visible.
 Do not label all everyday spending as unnecessary. Keep technical classification evidence in optional details.
@@ -34,8 +34,9 @@ changes, prepare workstream prompts and review completed diffs before recommendi
 Maintain this document; do not edit application code without an explicit request or merge without approval.
 Do not launch agents unless requested. Review repository/worktree state on demand, not through claimed continuous monitoring.
 For work across PCs, handoffs should identify the GitHub branch, base commit, changed contract and test evidence.
-External UI owner planned: the user's friend's Codex agent on a second laptop; not configured or started yet.
-The user wants help setting up its workstream. No agent launched from this chat.
+UI workstream reports started on codex/s-mobiili-ui from 65e4e80, with screenshots received.
+It owns frontend/src/main.jsx, frontend/src/Coach.jsx and frontend/src/style.css, plus a separate handoff document.
+This chat owns PROJECT_STATUS.md. No agent launched from this chat; branch changes have not yet been reviewed.
 UI work should use a separate branch, preserve agreed API contracts and avoid backend edits without coordination.
 Before its implementation handoff, provide reference screenshots and a shared base commit; review its diff before integration.
 Coordinate ownership of main.jsx, Coach.jsx and style.css to avoid overlapping UI changes across workstreams.
@@ -51,7 +52,9 @@ Proposed time budget from this update: 1 hour for data/contract decisions and UI
 Limit UI replication to screens needed by that journey; do not rebuild unrelated banking functionality.
 A small real-LLM interpretation/explanation layer is desirable for open questions if time permits, with Python calculations
 and deterministic fallback. Do not let provider integration block the working scenario or mislabel the fallback as an LLM.
-Next coordination step: obtain reference screenshots and prepare the external UI agent's scoped branch/file/API handoff.
+UI handoff is underway: spending-first Home, Spending, rule-based Coach, optional Goals and collapsed full-object planning.
+UI agent requests dedicated contracts for dated comparison and category-reduction what-if; these remain unimplemented.
+It will not expose unsupported reduction controls. No conflicting frontend ownership is assigned in this chat.
 The data audit remains the first backend task and should be bounded to the decisions needed by this demo.
 
 ## Completed features
@@ -105,7 +108,7 @@ or double-counting money that is also in accessible funds/reserves. No progress 
 
 ## Current priorities and proposed workstreams (maximum three)
 
-Owners below are proposed assignments, not running agents. Execute task 1 first.
+UI ownership is active as reported above; backend/Coach assignments below remain proposed. Execute the data audit first.
 
 ### 1. Data-first planning, then a minimal goal-first review
 
