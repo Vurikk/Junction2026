@@ -128,7 +128,7 @@ No other worktrees, backend files, provider configuration, ledger, or server pro
 
 Changed files:
 - `src/DemoQuestions.jsx`: customer-scoped read-only question loading, loading/error note, and explicitly labelled Demo questions.
-- `src/demoQuestions.js`: validates up to three server-supplied prompts; gates the contextual reduction follow-up.
+- `src/demoQuestions.js`: validates up to four server-supplied prompts, including the dated savings ranking; gates the contextual reduction follow-up.
 - `src/Coach.jsx`: sends selected questions through the existing guarded Coach path and offers What about 10% instead?
   only on the latest usable reduction response, with no pending retry or error. Older cards cannot offer stale context.
 - `src/style.css`: four small rules for the disclosure, reusing the existing button layout and design.

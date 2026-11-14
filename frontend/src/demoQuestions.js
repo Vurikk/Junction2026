@@ -3,7 +3,7 @@ export async function loadDemoQuestions(api, customer, signal) {
   const result = await api(`customers/${customer}/coach-demo-prompts`, { credentials: 'same-origin', signal });
   const questions = Array.isArray(result?.questions) ? result.questions.filter(item =>
     typeof item?.id === 'string' && typeof item.label === 'string' && typeof item.question === 'string'
-    && item.label.trim() && item.question.trim() && item.question.length <= 500).slice(0, 3) : [];
+    && item.label.trim() && item.question.trim() && item.question.length <= 500).slice(0, 4) : [];
   return { questions, note: typeof result?.note === 'string' ? result.note : '' };
 }
 

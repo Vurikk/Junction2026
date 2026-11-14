@@ -34,6 +34,8 @@ await loadDemoQuestions(api, 'customer-b', signal);
 assert.equal(requests.at(-1).path, 'customers/customer-b/coach-demo-prompts');
 const malformed = await loadDemoQuestions(async () => ({ questions: [null, { ...sample, question: '' }, sample] }), 'a');
 assert.deepEqual(malformed.questions, [sample]);
+const four = ['overview', 'save-most', 'comparison', 'restaurants'].map(id => ({ ...sample, id }));
+assert.deepEqual((await loadDemoQuestions(async () => ({ questions: four }), 'a')).questions, four);
 await assert.rejects(loadDemoQuestions(async () => { throw new Error('offline'); }, 'a'), /offline/);
 const reduction = { conversation_id: 'fixture-conversation', cards: [{ type: 'category_reduction', data: {} }] };
 assert.equal(canFollowUpReduction(reduction), true);
