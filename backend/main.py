@@ -1,14 +1,14 @@
-"""Local demo API. Financial calculations stay in Python; no LLM is connected."""
+"""Local demo API. Python owns financial values; optional Verda calls are explicitly gated."""
 
 import os
 from contextlib import asynccontextmanager
 from datetime import date
 from decimal import Decimal
 from typing import Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from .data_test import DATA_DIR, load_customers
@@ -101,7 +101,12 @@ async def lifespan(app):
     app.state.customers = {customer.customer_id: customer for customer in customers}
     app.state.assumptions = {c.customer_id: Assumptions().model_dump(mode='json') for c in customers}
     app.state.goals = {customer.customer_id: [] for customer in customers}
-    yield
+    from .coach_llm import CoachLLM
+    app.state.coach_llm = CoachLLM.from_env()
+    try:
+        yield
+    finally:
+        await app.state.coach_llm.close()
 
 
 app = FastAPI(title="S-Bank Financial Coach", version="0.1.0", lifespan=lifespan)
@@ -276,9 +281,10 @@ def reduce_category(request: Request, customer_id: str, payload: CategoryReducti
 class CoachInput(Model):
     question: str = Field(min_length=1, max_length=500, pattern=r"\S")
     scenario: GoalInput | None = None
+    conversation_id: UUID | None = None
+    request_id: UUID | None = None
 
 
-@app.post("/api/customers/{customer_id}/coach")
 def coach(request: Request, customer_id: str, payload: CoachInput):
     from .coach import answer
     customer = customer_for(request, customer_id)
@@ -296,3 +302,24 @@ def coach(request: Request, customer_id: str, payload: CoachInput):
         result['baseline'] = Budget(**{key: baseline[key] for key in Budget.model_fields}).model_dump()
         result['analysis'] = Budget(customer_id=customer_id, **analysis).model_dump()
     return result
+
+
+@app.post("/api/customers/{customer_id}/coach")
+async def coach_endpoint(request: Request, response: Response, customer_id: str, payload: CoachInput):
+    import re
+    import time
+    deadline = time.monotonic() + 15
+    customer = customer_for(request, customer_id)
+    session = request.cookies.get('coach_session', '')
+    bootstrap = not re.fullmatch(r'[0-9a-f]{64}', session)
+    if bootstrap:
+        session = uuid4().hex + uuid4().hex
+        response.set_cookie('coach_session', session, httponly=True, samesite='strict',
+                            secure=request.url.scheme == 'https', path='/api', max_age=3600)
+    conversation_id = str(payload.conversation_id or uuid4())
+    baseline = coach(request, customer_id, payload)
+    return await request.app.state.coach_llm.respond(
+        customer, payload.question, conversation_id, str(payload.request_id) if payload.request_id else None,
+        session, baseline, bootstrap=bootstrap, scenario=payload.scenario is not None, deadline=deadline,
+        identified=payload.conversation_id is not None,
+    )

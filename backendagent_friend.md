@@ -3,7 +3,7 @@
 Updated: 2026-11-14 (Europe/Helsinki)
 Owner: backend agent
 Working branch: `codex/data-backed-budget`
-Status: backend restaurant demo verified for both original profiles; 30 tests pass. Allowance-progress policy remains deferred.
+Status: Verda integration verified with 49 passing tests; paid mode remains off pending review. Allowance policy deferred.
 
 ## How to use this file
 
@@ -29,7 +29,28 @@ Do not interpret a proposal as approved policy. Coordinate API changes with the 
 Contracts and original-data audit: [backend/DATA_COACH_HANDOFF.md](backend/DATA_COACH_HANDOFF.md).
 API reference: [backend/API.md](backend/API.md).
 
-## Current task: dependable restaurant-reduction demo
+## Current task: minimal Verda integration
+
+User explicitly approved an additive Coach integration, then corrected the cumulative cap to **EUR 1.00**.
+The Console screenshot identifies DeepSeek 4.1 Flash 1017 at EUR 0.1336 input / EUR 0.5346 output per million tokens.
+Supported model ID is exactly `deepseek-4-1-flash-1017`; unverified models/configuration fail closed.
+
+Implementation, exact additive UI contract and review-only smoke command: [backend/VERDA_HANDOFF.md](backend/VERDA_HANDOFF.md).
+
+- Existing financial/data endpoints and goal preview contracts stay intact; no allowance-progress policy implemented.
+- Optional conversation/request UUIDs, browser/customer isolation, three approved read-only tools, independent Python result cards.
+- Explanations select Python fact IDs; no free model-generated numerical claims. Privacy blocks unsafe/uncertain pasted content.
+- Cumulative EUR ledger reserves worst-case context/output cost atomically; no reset on restart, no automatic retries/refunds.
+- Host-bound review, one paid worker, two calls/message, 15-second deadline, persistent deduplication and session/global rate limits.
+- `COACH_LLM_BUDGET_EUR=1.00` is now required. The old USD variable is migration-only, never silently interpreted as euros.
+- No real key was inspected or printed, no actual Verda request made, and no real approval/paid deployment initialized.
+- UI must retain the session cookie and reuse conversation/request IDs for retries. Legacy callers remain on the free fallback path.
+- Manager must review privacy/language limits, euro pricing and the ONE designated host before activation.
+  Other PCs call that backend; they must not create their own ledgers or independent paid deployments.
+- All 49 tests passed, including 19 Verda tests with mocked transport; existing data-backed HTTP workflows still pass.
+- Existing interactive servers were not restarted. Frontend integration and a real provider smoke test remain pending.
+
+## Verified restaurant-reduction demo
 
 Verified on 2026-11-14 using the actual supplied datasets through the Python endpoint, then pinned in isolated real-HTTP tests.
 Use these exact periods; the latest overall month does not necessarily contain restaurant purchases.
@@ -147,8 +168,8 @@ No existing contracts should change merely to make the bar look populated.
 ## Local work and operational notes
 
 - `backend/ALLOWANCE_PROGRESS_PROPOSAL.md` and this handoff are maintained on `codex/data-backed-budget` for manager review.
-- Current delivery is a contract-preserving balance fix, focused regression coverage and the demo recipe; no main merge.
-- Latest verification is 30 passing tests; the original feature delivery had 28 passing tests.
+- Current delivery is gated Verda support with additive Coach fields and mocked verification; no frontend changes or main merge.
+- Latest full verification is 49 passing tests (19 Verda tests); the restaurant-demo delivery had 30 passing tests.
 - Original datasets are available outside the backend worktree via `SBANK_DATA_DIR`; never commit them or raw records.
 - On this Windows host, sandbox loopback setup blocked asyncio tests; the full suite passed outside the sandbox.
 - The installed Starlette version emitted a TestClient/httpx deprecation warning; it did not fail tests.
@@ -160,3 +181,5 @@ No existing contracts should change merely to make the bar look populated.
 - 2026-11-14: Awaiting manager review of the allowance-progress proposal. No approval recorded yet.
 
 - 2026-11-14: Prioritize Coach restaurant-reduction demo; allowance-progress proposal remains unimplemented.
+
+- 2026-11-14: User changed Verda limit to EUR 1.00; implement with mocks, commit/push, no automatic paid activation or merge.

@@ -1,7 +1,7 @@
 # Financial engine API extensions
 
 Existing customer, spending and mortgage routes retain their fields and semantics.
-No LLM is connected. All user inputs and goals are per-customer, in memory, reset on restart.
+Optional Verda support is disabled/gated by default. Goals and confirmed inputs remain per-customer, in memory, reset on restart.
 
 ## Data-backed Home and read-only reduction scenarios
 
@@ -128,7 +128,24 @@ the hypothetical goal. Its temporary allocation ID is `preview`; confirmation cr
 Unknown input amounts remain null in both views. Repeated previews leave stored goals, assumptions and budgets unchanged.
 Editing the scenario invalidates UI confirmation until a new preview is requested. Discard and customer switching do not save it.
 Goal-analysis adds `coach_message`; all existing fields remain compatible.
-No chat history, external provider or API key is required. Unknown questions get suggested topics.
+No external provider or API key is required for the rule-based path. Unknown questions get suggested topics.
 Whitespace-only questions are rejected (422). Category names can be asked directly; answers refer to the latest recorded month.
 An absent category is not proof of zero actual spending. Mortgage answers distinguish application data from active debt;
 monthly repayments and current account balances are not inferred from historical records.
+
+
+## Optional Verda Coach integration (additive, gated)
+
+`POST /api/customers/{id}/coach` additionally accepts optional UUID `conversation_id` and `request_id`.
+Existing question/scenario and response fields are preserved. Adds `mode` (`llm` or `rule_based`), nullable `fallback_reason`,
+returned conversation/request IDs and `cards` containing validated Python aggregates. Goal previews stay local and read-only.
+The first request establishes an HttpOnly session cookie; paid calls require a supplied conversation ID and that cookie.
+Keep the same IDs/body on retries; use a new request ID for a new turn and a new conversation on customer change.
+
+Only category spending, spending comparison and category reduction are approved tools. Model explanations select validated
+Python fact IDs; all financial values and result cards remain calculated/rendered by Python. No automatic goal/input changes.
+The user-approved cumulative limit is **EUR 1.00**, replacing the earlier USD wording. Paid deployment requires explicit local review,
+a persistent host-bound SQLite ledger, and `COACH_LLM_BUDGET_EUR`; the old USD variable does not enable paid calls.
+
+See [VERDA_HANDOFF.md](VERDA_HANDOFF.md) for exact fields/card schemas, fallback reasons, privacy controls,
+model/pricing evidence, duplicate semantics, setup gates and the controlled smoke command. No paid mode was enabled during implementation.

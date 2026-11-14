@@ -68,7 +68,9 @@ Mortgage applications are never treated as active repayment schedules. Goals res
 Confirmed inputs also reset. Completion estimates require explicitly confirmed repeating capacity; they are conditional.
 The model uses aggregate cash across a planning horizon and does not model intra-period liquidity or goal progress.
 Category/basket classifications are heuristics. The Coach page offers short deterministic answers and read-only goal previews.
-No customer data is sent to external services. Bind both servers to loopback for this unauthenticated demo.
+By default, no customer data is sent to external services. Optional Verda mode sends only filtered questions and aggregate facts.
+It requires explicit review and a persistent EUR 1 cap; see [backend/VERDA_HANDOFF.md](backend/VERDA_HANDOFF.md).
+Bind both servers to loopback for this unauthenticated demo.
 
 ## Rule-based coach
 

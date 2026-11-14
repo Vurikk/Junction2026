@@ -1,6 +1,7 @@
 """Real HTTP integration against an isolated Uvicorn process and local demo data."""
 
 import socket
+import os
 import subprocess
 import sys
 import tempfile
@@ -21,6 +22,7 @@ class LiveIntegrationTests(unittest.TestCase):
         cls.process = subprocess.Popen(
             [sys.executable, '-m', 'uvicorn', 'backend.main:app', '--host', '127.0.0.1', '--port', str(port)],
             cwd=Path(__file__).resolve().parents[1], stdout=cls.log, stderr=cls.log,
+            env={**os.environ, 'COACH_LLM_ENABLED': 'false'},
         )
         cls.client = httpx.Client(base_url=f'http://127.0.0.1:{port}', timeout=30, trust_env=False)
         cls.addClassCleanup(cls.cleanup)

@@ -1,6 +1,7 @@
 """Synthetic edge cases and HTTP validation; no original datasets needed."""
 
 from copy import deepcopy
+import os
 from datetime import date
 from unittest import TestCase, main
 from unittest.mock import patch
@@ -191,6 +192,9 @@ class DataCoachTests(TestCase):
 
 class DataCoachApiTests(TestCase):
     def setUp(self):
+        disabled = patch.dict(os.environ, {'COACH_LLM_ENABLED': 'false'})
+        disabled.start()
+        self.addCleanup(disabled.stop)
         loader = patch("backend.main.load_customers", return_value=[fixture(), fixture("CUST00001")])
         self.addCleanup(loader.stop)
         loader.start()
