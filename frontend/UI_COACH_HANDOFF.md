@@ -60,3 +60,24 @@ Manager reports a prior successful backend smoke at0e43cbd; that is not a browse
 Conversation state is in memory and resets on page reload; only prior validated selections are backend context, not full chat memory.
 Backend follow-up: concurrency_limit can be cached; UI now explains finality and never changes UUID to bypass it.
 No additional backend schema is required for the implemented wiring.
+
+## Full-app follow-up verification (14 November 2026)
+
+Tested exact candidate7a958ebcc3e45a4d670fa83a15fc1dc451e5f0d6; no code regressions found or fixes made.
+This supplements the earlier mock-only limits above. A NEW isolated Uvicorn process on127.0.0.1:8026
+was launched with COACH_LLM_ENABLED=false explicitly and the supplied synthetic data directory, one worker.
+A NEW Vite process on127.0.0.1:5187 targets only8026. Existing servers and paid configuration were not changed.
+
+Browser checks passed at360/390px: populated Home, all four Coach entries, close/reopen retains draft/conversation,
+both customers, per-customer conversation clearing, monthly bars and historical-average lines, rule-based answers
+with recorded dates, unknown allowances, goal preview/discard and explicit save. Discard left Goals empty;
+re-preview and one explicit confirmation created exactly one EUR10 flexible goal for CUST04457.
+Direct read-only HTTP verified one goal on CUST04457 and an empty JSON array on CUST00001.
+The synthetic goal exists only in this isolated process's memory. No live financial action was performed.
+CUST00001 guided September restaurants20% reduction returned225.70/180.56/45.14 EUR with historical dates.
+
+Evidence: qa/full-app-disabled-chart-360.jpg, qa/full-app-disabled-chart-390.jpg,
+qa/full-app-disabled-coach-390.jpg. No provider calls/paid activation, no backend edits or main merge.
+This verifies UI-to-backend HTTP operation in disabled mode; cookie identity/deduplication enforcement in the paid path,
+physical phone keyboards, budget-line editing and weekly chart switching were not additionally exercised here.
+The manager's pending backend concurrency fix must be reviewed before changing the current final-result notice.
