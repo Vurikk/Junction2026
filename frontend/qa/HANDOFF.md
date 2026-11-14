@@ -1,5 +1,54 @@
 # S-mobiili-inspired coaching UI
 
+## Latest feature: guided category reduction in Coach
+
+Coach now offers **Explore spending less**. Monthly history supplies complete elapsed months and
+their own category options. Unknown/uncategorized entries are excluded. Restaurants is the editable
+default only when present; otherwise the first observed category is selected. Percentage starts at 20
+and accepts 0–100 with two decimal places. The backend remains the authority on period eligibility.
+
+POST `/category-reduction` receives the explicit category, month start, monthly period and percentage.
+All displayed financial amounts come from its response. Result shows recorded and hypothetical spending,
+potential reduction and source dates. Nothing is saved; goal timing remains unavailable.
+Home and the existing goal preview/confirmation flow are unchanged.
+
+Inputs clear old results. AbortController plus a request revision guard prevents late results after
+edits or unmount/customer switches, even if the request provider ignores abort. An immediate request
+lock and disabled button prevent duplicate submissions. Missing-history and preview errors have retry.
+
+### Automated verification
+
+- `node frontend/qa/check-reduction.mjs`: PASS against the real running backend on 8018.
+  Option fixtures cover partial/current/empty months, unsupported categories, fallback selection and
+  percentage validation. Real HTTP checks cover both profiles, repeatability, 0/20/100%, absent category
+  404, invalid percentage/partial period 422, and unchanged goals/assumptions/budgets for both customers.
+- Exact 20% examples returned by Python and also observed in the browser:
+  CUST04457, August 2026 Entertainment: 87.46 baseline, 69.97 hypothetical, 17.49 reduction.
+  CUST00001, September 2026 Restaurants: 225.70 baseline, 180.56 hypothetical, 45.14 reduction.
+  Restaurants is absent from CUST04457's latest complete month; no category is assumed to exist.
+- Frontend production build: PASS. Existing >500 kB bundle warning remains. No new dependencies.
+
+### Manual browser verification
+
+- Both real profiles completed a scenario and displayed the exact API amounts above.
+- Actual CSS widths 360/390; document widths 345/375 including scrollbar space, no horizontal overflow.
+  Screenshots: `reduction-360.jpg` and `reduction-390.jpg` (real backend, not fixtures).
+- 0% displayed zero reduction and unchanged hypothetical spending; 100% displayed zero hypothetical
+  spending. 101% was rejected by native input validity. Edits removed the prior result.
+- Changing category/month refreshed options and cleared results. Switching customers removed the
+  old panel/results. The second profile reopened with its own latest month and supported category.
+- `qa/reduction-harness.html` is a local Vite-only fixture page, not a production entry point.
+  Browser checks exercised 404, 422, network error/retry, empty history, history-load failure/retry,
+  disabled duplicate submission, and deliberately late responses after input edit/customer switch.
+  Delayed fixtures ignore abort deliberately; neither late response appeared. These are manual
+  controlled-fixture checks, not automated browser tests or real network-outage checks.
+- Existing goal preview and explicit confirmation worked; the confirmed test goal appeared in Goals.
+  The named `Reduction regression test` goal remains only in the currently running backend memory.
+
+Remaining limits: no physical-device/screen-reader checks, no delayed real-network interception,
+no general natural-language scenario parsing. Goal impact stays null by backend design; no blocker
+for this guided monthly interaction. Preview remains on 5178 with the current backend on 8018.
+
 ## Latest visual follow-up: combined card
 
 Per direct user feedback, Balance, Financial coach and Safe to spend now share one white card.

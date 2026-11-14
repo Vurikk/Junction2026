@@ -190,3 +190,9 @@ footer { color: #606b63; }
 .coach-allowance-group .allowance-track { background: #bdd4c5; }
 .coach-allowance-group .allowance-toggle button[aria-pressed='true'] { background: white; }
 .money-details > summary { color: #626862; font-size: 12px; padding: 12px 2px; }
+.reduction-panel { margin: 16px 0 24px; padding: 16px; border: 1px solid #cbded1; border-radius: 10px; background: #f4faf6; }
+.reduction-panel > h3 { color: #176d4b; margin-top: 0; }
+.reduction-result { border-top: 1px solid #cbded1; margin-top: 18px; padding-top: 12px; }
+.reduction-result h3 { color: #176d4b; }
+.reduction-result .row { flex-wrap: wrap; }
+.reduction-panel .error { overflow-wrap: anywhere; }

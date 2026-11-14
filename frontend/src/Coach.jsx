@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CategoryReduction from './CategoryReduction';
 
 const suggestions = [
   'Spending by category', 'Spending vs historical average', 'Daily and weekly allowance', 'Goal progress', 'What if I add a goal?'];
@@ -9,6 +10,7 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
   const [question, setQuestion] = useState(initialQuestion);
   const [preview, setPreview] = useState(null);
   const [scenario, setScenario] = useState(false);
+  const [reductionOpen, setReductionOpen] = useState(false);
   async function ask(text, draft) {
     setBusy(true); setError(''); setPreview(null);
     setMessages(old => [...old, { text, user: true }]);
@@ -41,8 +43,11 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
     <p className="coach-label">Rule-based demo coach</p>
     <p>Explore recorded categories, compare with your usual spending or check an allowance.</p>
     <p className="fine">Uses English keywords and prepared explanations, not a live AI model.
-      This chat previews adding a goal; the category-reduction calculator is not connected here.
-      Estimates need a confirmed optional Home plan.</p>
+      Use the guided spending preview to explore a category change.
+      Allowance and goal estimates need a confirmed optional Home plan.</p>
+    <button className="primary" aria-expanded={reductionOpen} onClick={() => setReductionOpen(value => !value)}>
+      {reductionOpen ? 'Close spending preview' : 'Explore spending less'}</button>
+    {reductionOpen && <CategoryReduction key={customer} customer={customer} api={api} money={money} />}
     <div className="suggestions">{suggestions.map(text =>
       <button key={text} disabled={busy} onClick={() => ask(text)}>{text}</button>)}</div>
     <div role="log" aria-live="polite">{messages.map((item, i) =>
