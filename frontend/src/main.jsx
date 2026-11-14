@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import './style.css';
+import Coach from './Coach';
 
 const money = value => value == null ? 'Not available' : new Intl.NumberFormat('en-FI', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 2,
@@ -58,6 +59,8 @@ function PlanningForm({ assumptions, busy, onSave }) {
 function App() {
   const [customers, setCustomers] = useState([]);
   const [customer, setCustomer] = useState('');
+  const activeCustomer = useRef(customer);
+  activeCustomer.current = customer;
   const [page, setPage] = useState('Home');
   const [data, setData] = useState({});
   const [period, setPeriod] = useState('Month');
@@ -65,6 +68,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   const [reload, setReload] = useState(0);
+  const [goalNotice, setGoalNotice] = useState('');
   useEffect(() => {
     const controller = new AbortController();
     api('customers', { signal: controller.signal }).then(items => {
@@ -95,6 +99,8 @@ function App() {
         body: JSON.stringify({ name: fields.get('name').trim(), amount_eur: fields.get('amount'), priority: fields.get('priority') }),
       });
       setData({}); setAnalysis(null); form.reset(); setReload(value => value + 1);
+      const result = await api(`customers/${customer}/goal-analysis`);
+      setGoalNotice(result.coach_message);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   async function analyze() {
@@ -121,7 +127,7 @@ function App() {
     <main>
       <div className="customer"><label htmlFor="customer">Your demo profile</label>
         <select id="customer" value={customer} disabled={busy || !customers.length} onChange={e => {
-          setData({}); setAnalysis(null); setCustomer(e.target.value);
+          setData({}); setAnalysis(null); setGoalNotice(''); setCustomer(e.target.value);
         }}><option value="" disabled>Select customer</option>
           {customers.map(item => <option key={item.customer_id}>{item.customer_id}</option>)}</select></div>
       <div className="heading"><p className="eyebrow">A LITTLE CLARITY, EVERY DAY</p>
@@ -186,6 +192,7 @@ function App() {
           <p className="fine">{history?.note} Basket classifications are uncertain; everyday categories can contain essentials.</p></section>
       </>}
       {page === 'Goals' && <>
+        {goalNotice && <section role="status">{goalNotice}</section>}
         <section><div className="section-title"><h2>Your goals</h2><span className="tag">One step at a time</span></div>
           {!data.goals && <p role="status">{error ? 'Goals unavailable.' : 'Loading goals…'}</p>}
           {data.goals?.length === 0 && <div className="empty"><span>◎</span><h3>What are you looking forward to?</h3>
@@ -216,10 +223,15 @@ function App() {
           <button className="primary" disabled={busy || !customer || !data.goals}>{busy ? 'Please wait…' : 'Create goal'}</button>
         </form></section>
       </>}
-      {page === 'Coach' && <section className="empty"><span>✦</span><p className="eyebrow">YOUR FINANCIAL COACH</p>
-        <h2>A little guidance goes a long way.</h2>
-          <p>Personal coaching is coming soon. For now, create a goal and check what we know about your plan.</p>
-        <button className="primary" onClick={() => setPage('Goals')}>Explore my goals</button></section>}
+      {page === 'Coach' && customer && <Coach key={`${customer}-${reload}`} customer={customer} api={api} money={money}
+        onSaved={() => {
+          if (activeCustomer.current !== customer) return;
+          ['goals', 'budget'].forEach(resource => api(`customers/${customer}/${resource}`)
+            .then(result => {
+              if (activeCustomer.current === customer) setData(old => ({ ...old, [resource]: result }));
+            }).catch(e => { if (activeCustomer.current === customer) setError(e.message); }));
+          setAnalysis(null); setGoalNotice('');
+        }} />}
       <footer>S-Bank inspired · Junction 2026<br />Historical synthetic demo data</footer>
     </main>
     <nav aria-label="Main navigation">{[['Home', '⌂'], ['Spending', '▥'], ['Goals', '◎'], ['Coach', '✦']].map(([name, icon]) =>

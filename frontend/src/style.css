@@ -76,3 +76,8 @@ nav button span { display: block; font-size: 24px; line-height: 30px; }
 nav button[aria-current] { color: #007635; background: #edf5e7; font-weight: 700; }
 @media (min-width: 600px) { main { padding-left: 48px; padding-right: 48px; } h1 { max-width: none; font-size: 38px; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+.coach .suggestions { display: flex; flex-wrap: wrap; gap: 8px; }
+.coach button { padding: 12px; cursor: pointer; }
+.chat { background: #eff7f1; padding: 14px; margin: 12px 0; border-radius: 12px; overflow-wrap: anywhere; }
+.chat.user { background: #f4f4f4; margin-left: 24px; }
+.chat p { margin: 6px 0; }

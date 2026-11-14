@@ -1,7 +1,7 @@
 # S-Bank Financial Coach — foundation
 
 Minimal FastAPI + React/Vite local demo using the existing two synthetic customers.
-No LLM, authentication, database or full coaching UI is implemented.
+The coach uses Python response templates. No LLM, API keys, authentication or database is required.
 
 ## Requirements and local data
 
@@ -67,5 +67,20 @@ Safe daily/weekly budgets and goal feasibility remain unavailable until income, 
 Mortgage applications are never treated as active repayment schedules. Goals reset when the backend stops.
 Confirmed inputs also reset. Completion estimates require explicitly confirmed repeating capacity; they are conditional.
 The model uses aggregate cash across a planning horizon and does not model intra-period liquidity or goal progress.
-Category/basket classifications are heuristics. The Coach page remains a placeholder, with no LLM connected.
+Category/basket classifications are heuristics. The Coach page offers short deterministic answers and read-only goal previews.
 No customer data is sent to external services. Bind both servers to loopback for this unauthenticated demo.
+
+## Rule-based coach
+
+Run the backend and frontend as above, then open Coach. Suggested questions cover categories,
+historical averages, daily/weekly allowances, goal progress and adding a hypothetical goal.
+Category answers show the latest recorded month; averages compare the latest complete month
+with the average of complete months. Recorded coverage may be incomplete.
+Confirm planning inputs on Home for allowance and goal estimates. Saved progress is unavailable.
+Preview a goal with its name, amount and priority; only **Confirm and create goal** saves it.
+Goal creation also displays a short message from the existing goal-analysis API.
+
+Templates and question routing live in `backend/coach.py`; calculations remain in `backend/financial.py`.
+A future language provider can replace the presentation layer without changing the engine.
+Run synthetic checks without customer data: `python -m unittest backend.test_financial backend.test_coach -v`.
+Run `npm.cmd run build` inside `frontend` to verify the React production build.

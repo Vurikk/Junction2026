@@ -77,6 +77,7 @@ class GoalAnalysis(Budget):
     ordered_goal_ids: list[str]
     total_target_eur: str
     explanation: str
+    coach_message: str = ""
 
 
 class MortgageApplication(Model):
@@ -172,8 +173,11 @@ def create_goal(request: Request, customer_id: str, payload: GoalInput):
 def analyze_goals(request: Request, customer_id: str):
     customer_for(request, customer_id)
     ordered = sorted(request.app.state.goals[customer_id], key=lambda goal: PRIORITIES[goal.priority])
+    from .coach import goal_message
+    calculated = plan(request.app.state.assumptions[customer_id], ordered)
     return {
-        "customer_id": customer_id, **plan(request.app.state.assumptions[customer_id], ordered),
+        "coach_message": goal_message(calculated, ordered),
+        "customer_id": customer_id, **calculated,
         "ordered_goal_ids": [goal.id for goal in ordered],
         "total_target_eur": str(sum((goal.amount_eur for goal in ordered), Decimal("0.00"))),
         "explanation": "Required payments and reserves come first. Completion estimates assume explicitly confirmed repeating capacity."
@@ -231,3 +235,23 @@ def spending_history(request: Request, customer_id: str, period: Literal["week",
 @app.get("/api/customers/{customer_id}/income")
 def income_analysis(request: Request, customer_id: str):
     return income(customer_for(request, customer_id))
+
+
+class CoachInput(Model):
+    question: str = Field(min_length=1, max_length=500)
+    scenario: GoalInput | None = None
+
+
+@app.post("/api/customers/{customer_id}/coach")
+def coach(request: Request, customer_id: str, payload: CoachInput):
+    from .coach import answer
+    customer = customer_for(request, customer_id)
+    current = list(request.app.state.goals[customer_id])
+    preview = None
+    analysis = analyze_goals(request, customer_id)
+    if payload.scenario is not None:
+        preview = payload.scenario.model_dump(mode='json')
+        current.append(Goal(**payload.scenario.model_dump(), id='preview', customer_id=customer_id))
+        analysis = plan(request.app.state.assumptions[customer_id], current)
+    recorded = history(customer, 'month') if not customer.get_transactions().empty else None
+    return answer(payload.question, analysis, current, recorded, preview)

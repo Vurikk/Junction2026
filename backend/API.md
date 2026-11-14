@@ -97,3 +97,12 @@ History monetary totals are JSON numbers; optional chart targets and confirmed i
 
 Run real HTTP checks with `python -m unittest backend.test_integration -v`.
 The test uses local demo data and an isolated server; it never changes goals in an already-running app.
+
+## Rule-based coach
+`POST /api/customers/{id}/coach` accepts `question` (1-500 characters) and optional
+`scenario` with the existing GoalInput fields (name, amount_eur, priority).
+Returns `kind`, short `text`, and category `rows` (`label`, `value`) where relevant.
+Scenario replies also return the validated `preview` payload. This endpoint never writes state;
+confirming in the UI calls the existing goal POST. Scenarios model adding a goal, not editing one.
+Goal-analysis adds `coach_message`; all existing fields remain compatible.
+No chat history, external provider or API key is required. Unknown questions get suggested topics.

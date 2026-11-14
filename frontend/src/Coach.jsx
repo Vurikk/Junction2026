@@ -1,0 +1,67 @@
+import React, { useState } from 'react';
+
+const suggestions = [
+  'Spending by category', 'Spending vs historical average', 'Daily and weekly allowance', 'Goal progress', 'What if I add a goal?'];
+export default function Coach({ customer, api, money, onSaved }) {
+  const [messages, setMessages] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [question, setQuestion] = useState('');
+  const [preview, setPreview] = useState(null);
+  const [scenario, setScenario] = useState(false);
+  async function ask(text, draft) {
+    setBusy(true); setError(''); setPreview(null);
+    setMessages(old => [...old, { text, user: true }]);
+    try {
+      const result = await api(`customers/${customer}/coach`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text, scenario: draft || null }),
+      });
+      setMessages(old => [...old, result]);
+      setScenario(result.kind === 'scenario'); setPreview(result.preview || null);
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
+  async function confirm() {
+    setBusy(true); setError('');
+    try {
+      await api(`customers/${customer}/goals`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(preview),
+      });
+      setPreview(null); setScenario(false); onSaved();
+      setMessages(old => [...old, { text: 'Goal saved.' }]);
+      const analysis = await api(`customers/${customer}/goal-analysis`);
+      setMessages(old => [...old, { text: analysis.coach_message }]);
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
+  return <section className="coach"><h2>Let's talk about your money</h2>
+    <p>Choose a question or type one. Estimates use your confirmed Home plan.</p>
+    <div className="suggestions">{suggestions.map(text =>
+      <button key={text} disabled={busy} onClick={() => ask(text)}>{text}</button>)}</div>
+    <div role="log" aria-live="polite">{messages.map((item, i) =>
+      <article className={item.user ? 'chat user' : 'chat'} key={i}>
+        <small>{item.user ? 'You' : 'Coach'}</small><p>{item.text}</p>
+        {item.rows?.map(row => <div className="row" key={row.label}><span>{row.label}</span><b>{money(row.value)}</b></div>)}
+      </article>)}</div>
+    {error && <p role="alert">{error}</p>}
+    {busy && <p role="status">Checking your plan...</p>}
+    <form onSubmit={e => { e.preventDefault(); ask(question); setQuestion(''); }}>
+      <label htmlFor="question">Your question</label>
+      <input id="question" value={question} onChange={e => setQuestion(e.target.value)} required maxLength={500} />
+      <button disabled={busy || !question.trim()}>Ask coach</button>
+    </form>
+    {scenario && <form onSubmit={e => {
+      e.preventDefault(); const fields = new FormData(e.currentTarget);
+      ask('Preview this goal', Object.fromEntries(fields));
+    }}><h3>Try adding a goal</h3>
+      <label htmlFor="preview-name">Name</label><input id="preview-name" name="name" required maxLength={100} />
+      <label htmlFor="preview-amount">Amount (EUR)</label>
+      <input id="preview-amount" name="amount_eur" type="number" min="0.01" max="9999999999.99" step="0.01" required />
+      <label htmlFor="preview-priority">Priority</label><select id="preview-priority" name="priority">
+        <option value="flexible">Flexible</option><option value="important">Important</option><option value="critical">Critical</option>
+      </select><button disabled={busy}>Preview without saving</button>
+    </form>}
+    {preview && <div><p>Save {preview.name}, {money(preview.amount_eur)}, {preview.priority}?</p>
+      <button disabled={busy} onClick={confirm}>Confirm and create goal</button>
+      <button disabled={busy} onClick={() => setPreview(null)}>Discard preview</button></div>}
+  </section>;
+}
