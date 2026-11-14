@@ -1,4 +1,4 @@
-"""Bounded LLM orchestration. All amounts, cards and final numerical prose come from Python."""
+"""One LLM tool-selection call; Python calculates cards and renders every explanation."""
 
 import asyncio
 import hashlib
@@ -8,7 +8,7 @@ import time
 from uuid import NAMESPACE_URL, uuid5
 
 from .coach_ledger import GateError
-from .coach_tools import TOOLS, facts_for, rendered_explanation, routing_context, run_tool, sanitize_question, selection
+from .coach_tools import TOOLS, facts_for, routing_context, run_tool, sanitize_question, selection
 from .verda import VerdaClient, settings_from_env
 
 ROUTER_PROMPT = (
@@ -88,15 +88,11 @@ class CoachLLM:
                     card = run_tool(customer, selected)
                     response['cards'] = [card]
                     facts = facts_for(card)
+                    # Summary first, followed by every Python fact, including all required caveats.
+                    text = ' '.join([facts['summary'], *(value for key, value in facts.items() if key != 'summary')])
+                    # llm identifies validated tool selection, not model-generated financial advice.
                     response.update(kind={'category_reduction': 'scenario', 'category_spending': 'categories',
-                                          'spending_comparison': 'average'}[card['type']], text=' '.join(facts.values()), rows=[])
-                    # Only the minimal Python facts go to the explanation call.
-                    explanation = await self.provider.complete(key + ':2', [
-                        {'role': 'system', 'content': 'Return only JSON {"fact_ids":[...]}. Select and order the provided fact IDs. '
-                                                    'Include summary. Do not generate prose, numbers or additional fields.'},
-                        {'role': 'user', 'content': json.dumps({'facts': facts})},
-                    ], deadline=deadline)
-                    response.update(text=rendered_explanation(explanation, facts), mode='llm')
+                                          'spending_comparison': 'average'}[card['type']], text=text, rows=[], mode='llm')
         except TimeoutError:
             response['fallback_reason'] = 'timeout'
         except GateError as error:
