@@ -1,6 +1,7 @@
 # Single-call Coach handoff
 
 Date: 2026-11-14. Branch: `codex/coach-single-call`.
+Published to `origin/codex/coach-single-call`; not merged.
 
 Base: `c3da04b6bb8ce453ce9d6c5f3f899adc77e8190c`.
 Implementation and focused tests: `2bbb09f11e02e01110de79411bf4c3dbba3d6716`.
@@ -56,8 +57,9 @@ Durable cached responses are intentionally not invalidated: old request IDs repl
 another paid call. Old in-progress claims retain their existing fallback behavior. Use a new request ID for a new turn.
 Do not reset the real ledger or approval state during integration.
 
-The integration owner should update two-call wording in `VERDA_HANDOFF.md` and `verda_smoke.py` documentation/comments.
-The former's fact-ordering description and second-call failure discussion are superseded by this handoff.
+The integration owner should update two-call wording in `VERDA_HANDOFF.md`.
+Its fact-ordering description and second-call failure discussion are superseded by this handoff.
+The smoke script's comment about preventing two paid messages describes duplicate invocations and remains valid.
 Those files were outside this agent's ownership and remain untouched. Do not execute the live smoke during integration.
 
 ## Verification
