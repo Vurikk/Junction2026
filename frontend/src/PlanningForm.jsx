@@ -1,12 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+const readableDate = value => new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+}).format(new Date(`${value.slice(0, 10)}T12:00:00Z`));
+
 const fields = [
   ['confirmed_income_eur', 'Salary and other expected income', 'Only additional income during this plan; exclude money already in the balance.'],
   ['upcoming_essential_bills_eur', 'Bills and food total',
     'Review the estimate below. Include all required debt and other bills; override the total as needed.'],
   ['emergency_reserve_eur', 'Money to keep untouched', 'Protect money for emergencies.'],
   ['everyday_spending_eur', 'Other everyday spending', 'Exclude food already in the bills and food total. Include other daily costs only once.'],
-  ['voluntary_goal_contribution_eur', 'Most you want to put towards goals', 'A limit for all goals together, subject to available capacity.'],
+  ['voluntary_goal_contribution_eur', 'Most you want to put towards goals', 'A limit for all goals together, only if enough money remains after your costs.'],
   ['weekly_budget_eur', 'Weekly chart target (optional)', 'A chart reference, separate from this spending plan.'],
   ['monthly_budget_eur', 'Monthly chart target (optional)', 'A chart reference, separate from this spending plan.'],
 ];
@@ -77,13 +81,13 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
           }} />
         {fields.slice(5).map(input)}
         <label className="check"><input name="repeat_plan" type="checkbox" defaultChecked={assumptions.repeat_plan}
-          onChange={() => setConfirmed(false)} />I expect the same capacity and contribution whenever this plan repeats.</label>
+          onChange={() => setConfirmed(false)} />I expect to have the same money available and put the same amount towards goals each time this plan repeats.</label>
       </details>
       <p>Your plan covers {days || 'an unknown number of'} days.</p>
       {review && <p role="status">Plan length changed. Automatic estimates reload; saved amounts and your edits remain.
         Review every retained amount for the new period.</p>}
       <label>Latest recorded balance (read-only)</label><p><strong>{money(balance?.amount_eur)}</strong></p>
-      {balance?.recorded_at && <p>Recorded at {balance.recorded_at}</p>}
+      {balance?.recorded_at && <p>Recorded on {readableDate(balance.recorded_at)}</p>}
       <p className="fine">{balance?.note}</p>
       {loading && <p role="status">Loading historical defaults…</p>}
       {error && <p role="alert">{error}</p>}
