@@ -12,31 +12,55 @@ SAVINGS_QUESTION = re.compile(
 )
 
 
-def savings_answer(normalized, customer):
-    match = SAVINGS_QUESTION.fullmatch(normalized)
-    if not match:
-        return None
+def savings_opportunities(customer, month=None, reduction_percent=10):
+    """Aggregate only an explicit month or the latest full recorded month; no financial state writes."""
+    percent = Decimal(str(reduction_percent))
+    if not percent.is_finite() or not 0 <= percent <= 100:
+        raise ValueError('Use a reduction between 0 and 100 percent.')
     windows = complete_windows(customer, 'month')
-    requested = match.group(1)
-    if requested:
-        windows = [window for window in windows if str(window) == requested]
+    if month is not None:
+        windows = [window for window in windows if str(window) == month]
+    result = {
+        'currency': 'EUR', 'status': 'unavailable_period', 'source_period': None,
+        'reduction_percent': float(percent), 'candidates': [],
+        'note': ('Review candidates only: restaurant, entertainment and travel purchases may still be necessary. '
+                 'Protect essential bills and emergency reserves. Other categories, bill payments, transfers and refunds '
+                 'are excluded. Recorded coverage may be incomplete. Hypothetical reductions are not actual savings; '
+                 'goals, allowances and confirmed inputs are unchanged.'),
+    }
     if not windows:
-        return 'No full recorded month matches this request. Choose a recorded month; missing records do not establish zero spending.'
+        return result
     window = windows[-1]
-    dates = period_dates(window)
+    result['source_period'] = period_dates(window)
     rows = in_window(spending_rows(customer), window)
     # Explicit bill types are protected even if their category has a misleading label.
     rows = rows[rows.transaction_type == 'purchase']
     labels = rows.category.fillna('').str.strip().str.casefold()
-    ranking = []
     for category in CANDIDATES:
         selected = rows[labels == category]
         if selected.empty:
             continue
         baseline = total_amount(selected)
-        reduction = money(baseline * Decimal('0.10'))
-        ranking.append((category, baseline, reduction))
-    ranking.sort(key=lambda item: (-item[2], item[0]))
+        reduction = money(baseline * percent / 100)
+        result['candidates'].append({
+            'category': category, 'baseline_spending_eur': float(baseline),
+            'hypothetical_spending_eur': float(baseline - reduction), 'potential_reduction_eur': float(reduction),
+        })
+    result['candidates'].sort(key=lambda item: (-Decimal(str(item['potential_reduction_eur'])), item['category']))
+    result['status'] = 'available' if result['candidates'] else 'no_candidates'
+    return result
+
+
+def savings_answer(normalized, customer):
+    match = SAVINGS_QUESTION.fullmatch(normalized)
+    if not match:
+        return None
+    result = savings_opportunities(customer, match.group(1))
+    if result['status'] == 'unavailable_period':
+        return 'No full recorded month matches this request. Choose a recorded month; missing records do not establish zero spending.'
+    dates = result['source_period']
+    ranking = [(item['category'], Decimal(str(item['baseline_spending_eur'])), Decimal(str(item['potential_reduction_eur'])))
+               for item in result['candidates']]
     prefix = (f"For {dates['start']} to {dates['end']}, comparing a hypothetical 10% cut "
               'in recorded restaurant, entertainment and travel purchases: ')
     if not ranking:

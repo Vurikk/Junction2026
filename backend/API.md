@@ -199,3 +199,34 @@ No provider call or reservation occurs. Conversation ownership and request dedup
 Existing goals/allowances/confirmed inputs and prior calculation context remain unchanged.
 Exact grocery-saving and online impulse-buying education questions documented in DEMO_PROMPTS_HANDOFF.md also
 return local general tips through this same response shape. No new financial tool or paid configuration is added.
+
+
+### Guided savings conversation (read-only)
+
+GET /api/customers/{id}/savings-opportunities accepts optional `month=YYYY-MM` and
+`reduction_percent` (default 10, range 0..100, at most two decimal places).
+Unknown customers: 404; invalid argument syntax/range: 422.
+Response:
+```
+{
+  "currency": "EUR",
+  "status": "available | no_candidates | unavailable_period",
+  "source_period": {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"},
+  "reduction_percent": 10,
+  "candidates": [{"category": "restaurants", "baseline_spending_eur": 95.04,
+                  "hypothetical_spending_eur": 85.54, "potential_reduction_eur": 9.50}],
+  "note": "Coverage, exclusions and hypothetical-only limitations"
+}
+```
+The example figures illustrate the response, not a default value. Python calculates all values per customer.
+`unavailable_period` returns null source_period and empty candidates; `no_candidates` retains the requested recorded dates.
+No month chooses latest full recorded calendar month. Explicit missing/partial months never substitute older data.
+Only negative purchase-type restaurant, entertainment and travel records qualify; explicit bill types are excluded even if
+misclassified into those categories. Same rounding as existing reductions. Sort by potential reduction descending, then category.
+The list is bounded to three approved aggregate categories. No records, merchant names, account IDs or goal IDs are returned.
+GET does not call a provider, access the spending ledger, create Coach receipts or change financial state.
+The guided UI should pin the source month for percentage reruns and never add these historical scenarios to goal capacity.
+
+Goal conversation reuses GET goals and GET goal-analysis. Existing fields and plan formulas are unchanged;
+coach_message now explains funded-within-horizon, conditional repeating-plan feasibility, no capacity and missing confirmations.
+Planned allocation is not saved progress. Completion periods are conditional plan periods, never promised calendar deadlines.

@@ -278,6 +278,14 @@ def reduce_category(request: Request, customer_id: str, payload: CategoryReducti
         raise HTTPException(404, str(error)) from error
 
 
+@app.get("/api/customers/{customer_id}/savings-opportunities")
+def savings_candidates(request: Request, customer_id: str,
+                       month: str | None = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+                       reduction_percent: Decimal = Query(Decimal('10'), ge=0, le=100, max_digits=5, decimal_places=2)):
+    from .savings_demo import savings_opportunities
+    return savings_opportunities(customer_for(request, customer_id), month, reduction_percent)
+
+
 @app.get("/api/customers/{customer_id}/coach-demo-prompts")
 def coach_demo_prompts(request: Request, customer_id: str):
     from .demo_prompts import demo_prompts

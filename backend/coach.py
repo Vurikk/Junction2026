@@ -15,12 +15,32 @@ def euro(value):
 
 def goal_message(analysis, goals):
     if not goals:
-        return 'Add a goal to see what your plan can fund.'
+        return ('What would you like to work towards? Add a goal with an amount and priority, then preview whether '
+                'your confirmed plan can fund it. Nothing is saved until you confirm.')
     if analysis['missing_inputs']:
-        return 'To check your goals, confirm on Home: ' + ', '.join(LABELS[k] for k in analysis['missing_inputs']) + '.'
+        return ('I can see your goals, but cannot yet say whether they fit your plan. Confirm on Home: '
+                + ', '.join(LABELS[k] for k in analysis['missing_inputs']) + '. '
+                'Use funds accessible now and additional income only; do not count income already in that balance again. '
+                'Historical spending or possible cuts do not confirm future money available for goals.')
     names = {g.id: g.name for g in goals}
-    parts = [f"{names[a['goal_id']]}: {euro(a['allocated_eur'])} planned" for a in analysis['allocations']]
-    return '; '.join(parts) + '. These are planned amounts; saved progress is unknown.'
+    targets = {g.id: g.amount_eur for g in goals}
+    parts = []
+    days = analysis['assumptions']['horizon_days']
+    for allocation in analysis['allocations']:
+        goal_id = allocation['goal_id']
+        part = f"{names[goal_id]}: {euro(allocation['allocated_eur'])} planned towards {euro(targets[goal_id])}"
+        if allocation['feasibility'] == 'funded':
+            part += f' - this target fits within the {days}-day plan'
+        elif allocation['feasibility'] == 'conditional':
+            part += (f" - not fully funded in this horizon; conditionally reachable in {allocation['completion_periods']} "
+                     f'plan periods of {days} days if the confirmed contribution and capacity repeat')
+        else:
+            part += ' - not fully funded in this plan; review the target, contribution or priorities'
+        parts.append(part + '.')
+    if analysis['shortfall_eur']:
+        parts.insert(0, f"Essential bills and the protected reserve exceed confirmed funds by {euro(analysis['shortfall_eur'])}.")
+    return (' '.join(parts) + ' Essential bills and reserves come first; critical goals take priority over flexible goals. '
+            'These are planned allocations; saved progress is unknown. Possible historical cuts have not been added to capacity.')
 
 
 def answer(question, analysis, goals, recorded=None, preview=None, mortgage_available=None):
