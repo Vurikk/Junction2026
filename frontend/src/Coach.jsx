@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import CategoryReduction from './CategoryReduction';
+import CoachResult from './CoachResult';
+import { createCoachSession, coachModeLabel, fallbackNotice } from './coachSession';
 
 export default function Coach({ customer, api, money, onSaved, initialQuestion = '', open = true }) {
   const [messages, setMessages] = useState([]);
@@ -10,6 +12,10 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
   const [preview, setPreview] = useState(null);
   const [draft, setDraft] = useState({ name: '', amount_eur: '', priority: 'flexible' });
   const pending = useRef(null);
+  const session = useRef(null);
+  if (!session.current || session.current.customer !== customer) {
+    session.current = { customer, client: createCoachSession(api, customer) };
+  }
   const mounted = useRef(false);
   const log = useRef(null);
   const composer = useRef(null);
@@ -36,24 +42,29 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
     setPreview(null); setError(''); setRetry(null);
     setMessages(old => [...old.filter(item => !item.tool), { text, user: true }, { tool }]);
   }
-  async function ask(text, scenario, userText = text) {
+  async function ask(text, scenario, userText = text, retryTurn = null) {
     if (pending.current || !text.trim()) return;
     const controller = new AbortController();
     pending.current = controller;
     setBusy(true); setError(''); setRetry(null); setPreview(null);
-    setMessages(old => [...old, { text: userText, user: true }]);
+    const turn = retryTurn || session.current.client.turn(text, scenario || null);
+    if (!retryTurn) setMessages(old => [...old, { text: userText, user: true }]);
     try {
-      const result = await api(`customers/${customer}/coach`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
-        body: JSON.stringify({ question: text, scenario: scenario || null }),
-      });
+      const result = await session.current.client.send(turn, controller.signal);
       if (!mounted.current || controller.signal.aborted) return;
-      setMessages(old => result.kind === 'scenario' && !result.preview
-        ? [...old.filter(item => !item.tool), result, { tool: 'goal' }] : [...old, result]);
+      const answer = { ...result, turnId: turn.request_id };
+      setMessages(old => {
+        const previous = old.filter(item => item.turnId !== turn.request_id);
+        return result.kind === 'scenario' && !result.preview && !result.cards?.length && /\bgoal\b/i.test(text)
+          ? [...previous.filter(item => !item.tool), answer, { tool: 'goal' }] : [...previous, answer];
+      });
+      if (['request_in_progress', 'rate_limited', 'concurrency_limit'].includes(result.fallback_reason)) {
+        setError(fallbackNotice(result.fallback_reason)); setRetry({ text, scenario, userText, turn });
+      }
       setPreview(result.preview || null);
     } catch (e) {
       if (!mounted.current || controller.signal.aborted) return;
-      setError(e.message); setRetry({ text, scenario, userText });
+      setError(e.message); setRetry({ text, scenario, userText, turn });
     } finally {
       if (mounted.current && pending.current === controller) { pending.current = null; setBusy(false); }
     }
@@ -100,7 +111,7 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
     <div className="conversation-log" ref={log} role="log" aria-label="Conversation" aria-live="polite" tabIndex={0}>
       {messages.length === 0 && <p className="conversation-empty">What would you like to explore?</p>}
       {messages.map((item, index) => <article className={item.user ? 'chat user' : 'chat'} key={index}>
-        <small>{item.user ? 'You' : 'Coach'}</small>
+        <small>{item.user ? 'You' : item.tool ? 'Coach' : coachModeLabel(item)}</small>
         {item.tool === 'savings' ? <CategoryReduction customer={customer} api={api} money={money} />
           : item.tool === 'goal' ? <form onSubmit={event => {
             event.preventDefault(); ask('Preview this goal', draft);
@@ -116,6 +127,8 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
             </select><button className="primary" disabled={busy}>Preview without saving</button>
           </fieldset></form> : <>
             <p>{item.text}</p>
+            {fallbackNotice(item.fallback_reason) && <p className="fine">{fallbackNotice(item.fallback_reason)}</p>}
+            {item.cards?.map((card, cardIndex) => <CoachResult key={cardIndex} card={card} money={money} />)}
             {item.analysis && <div className="conversation-result">
               <div className="row"><span>Current daily estimate</span><b>{money(item.baseline.daily_eur)}</b></div>
               <div className="row"><span>With this goal</span><b>{money(item.analysis.daily_eur)}</b></div>
@@ -139,7 +152,8 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
         <button disabled={busy} onClick={() => setPreview(null)}>Discard preview</button></div>}
       {busy && <p role="status" className="checking">Checking your recorded information…</p>}
       {error && <div className="error" role="alert"><p>{error}</p>
-        {retry && <button disabled={busy} onClick={() => ask(retry.text, retry.scenario, retry.userText)}>Retry answer</button>}</div>}
+        {retry && <button disabled={busy}
+          onClick={() => ask(retry.text, retry.scenario, retry.userText, retry.turn)}>Retry answer</button>}</div>}
     </div>
     <form className="chat-composer" ref={composer} onSubmit={event => {
       event.preventDefault(); ask(question); setQuestion('');
@@ -148,7 +162,7 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
       <div><input id="question" value={question} onChange={event => setQuestion(event.target.value)} required maxLength={500}
         placeholder="Spending, averages or allowances" disabled={busy} autoComplete="off" />
         <button className="primary" disabled={busy || !question.trim()} aria-label="Send message">Send</button></div>
-      <small>No conversation memory yet. Use guided controls for changes.</small>
+      <small>Follow-ups use this profile’s conversation. Guided previews never change your plan.</small>
     </form>
   </section>;
 }

@@ -41,7 +41,7 @@ export default function CoachDialog({ open, onClose, children }) {
     aria-labelledby="coach-title" aria-modal="true"
     onKeyDown={trapFocus}
     onCancel={event => { event.preventDefault(); onClose(); }}>
-    <div className="coach-dialog-heading"><h2 id="coach-title">Coach <small>Rule-based demo</small></h2>
+    <div className="coach-dialog-heading"><h2 id="coach-title">Coach <small>Financial explanations</small></h2>
       <button type="button" className="coach-expand" aria-label={expanded ? 'Collapse Coach' : 'Expand Coach'}
         aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? '⌄' : '⌃'}</button>
       <button type="button" aria-label="Close Coach" autoFocus onClick={onClose}>×</button></div>

@@ -180,11 +180,12 @@ class SingleCallTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.requests), 1)
         with self.ledger.transaction() as (db, _):
             db.execute('UPDATE conversations SET updated=?', (time.time() - 1801,))
-        self.queue.append(envelope(routed(arguments={**ARGS, 'reduction_percent': 10})))
+        spent = self.ledger.spent()
         expired = await self.ask('What about 10%?')
         self.assertEqual(expired['fallback_reason'], 'clarification_needed')
         self.assertEqual(expired['cards'], [])
-        self.assertEqual(len(self.requests), 2)
+        self.assertEqual(len(self.requests), 1)
+        self.assertEqual(self.ledger.spent(), spent)
 
     async def test_cached_duplicates_explicit_and_derived_ids_do_not_pay_after_restart(self):
         for request_id in (str(uuid4()), None):
@@ -238,6 +239,7 @@ class SingleCallTests(unittest.IsolatedAsyncioTestCase):
         result = await self.ask(request_id=str(uuid4()))
         self.assertEqual(result['fallback_reason'], 'budget_exhausted')
         self.assertEqual(result['mode'], 'rule_based')
+        self.assertEqual(result['cards'][0]['data']['potential_reduction_eur'], 80)
         self.assertEqual(len(self.requests), 1)
         self.assertEqual(self.ledger.spent(), 0.9402266112)
 
@@ -250,8 +252,8 @@ class SingleCallTests(unittest.IsolatedAsyncioTestCase):
                 result = await self.ask(request_id=str(uuid4()))
                 self.assertEqual(result['mode'], 'rule_based')
                 self.assertEqual(result['fallback_reason'], reason)
-                self.assertEqual(result['cards'], [])
-                self.assertEqual(result['text'], BASELINE['text'])
+                self.assertEqual(result['cards'][0]['data']['potential_reduction_eur'], 80)
+                self.assertIn(HYPOTHETICAL, result['text'])
                 self.assertNotIn('private-provider', json.dumps(result))
                 self.assertEqual(len(self.requests), before + 1)
                 self.assertEqual(len(self.calls()), before + 1)
@@ -276,13 +278,12 @@ class SingleCallTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(self.calls()), before + 1)
 
     async def test_failed_calculation_is_not_reported_as_llm_success(self):
-        args = {**ARGS, 'period_start': '2024-05-01'}
-        self.queue.append(envelope(routed(arguments=args)))
         result = await self.ask('What if I reduce restaurants in May 2024 by 20%?')
         self.assertEqual(result['mode'], 'rule_based')
         self.assertEqual(result['fallback_reason'], 'unsupported_period_or_category')
         self.assertEqual(result['cards'], [])
-        self.assertEqual(len(self.requests), 1)
+        self.assertEqual(self.requests, [])
+        self.assertEqual(self.calls(), [])
 
     async def test_disabled_configuration_keeps_rule_based_response(self):
         with patch.dict(os.environ, {'COACH_LLM_ENABLED': 'false'}):

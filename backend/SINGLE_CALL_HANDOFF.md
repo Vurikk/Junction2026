@@ -96,6 +96,13 @@ An existing Starlette/httpx TestClient deprecation warning was emitted; no depen
 
 ## Shared tests requiring integration updates
 
+Integration update, 2026-11-14: the items below describe the original branch's failures, not current expectations.
+The combined full backend discovery suite now passes all **83 tests**, with paid mode off and mocked provider calls.
+Shared fixtures now queue only routing responses; single-call counts and reservations are asserted. The obsolete second-call
+timeout test now verifies first-call timeout/no retry. Untrusted model prose is rejected before calculation, and the subsequent
+valid request verifies deterministic factual output. Context-expiry and missing-data tests assert zero additional provider
+calls/reservations after the local preflight integration. All isolation, non-mutation and accounting checks are retained.
+
 All entries below are in the unchanged `backend/test_verda.py` at the base revision.
 Remove the queued `explained()` response from the shared `valid()` helper and other successful mock sequences.
 Otherwise that stale response is incorrectly consumed as the next turn's tool selection.

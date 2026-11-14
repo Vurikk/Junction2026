@@ -31,10 +31,6 @@ def routed(name='category_reduction', arguments=None):
              'function': {'name': name, 'arguments': json.dumps(ARGS if arguments is None else arguments)}}]}
 
 
-def explained(**changes):
-    return {'role': 'assistant', 'content': json.dumps({'fact_ids': ['summary']}), **changes}
-
-
 def envelope(message, usage=True):
     result = {'model': MODEL, 'choices': [{'finish_reason': 'tool_calls' if message.get('tool_calls') else 'stop', 'message': message}]}
     if usage:
@@ -177,7 +173,7 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
                                           request_id or str(uuid4()), session or self.session, BASELINE, **kwargs)
 
     def valid(self, args=None):
-        self.queue.extend([envelope(routed(arguments=args)), envelope(explained())])
+        self.queue.append(envelope(routed(arguments=args)))
 
     async def test_selection_followup_and_minimal_provider_payload(self):
         self.valid()
@@ -197,14 +193,14 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
         for request in self.requests:
             self.assertEqual(request['reasoning_effort'], 'none')
             self.assertEqual(request['max_tokens'], OUTPUT_BOUND)
-        self.assertEqual(len(self.requests), 4)
+        self.assertEqual(len(self.requests), 2)
 
     async def test_category_and_comparison_tools(self):
         for question, name, args, expected in [
             ('Restaurants spending in April 2024', 'category_spending', {k: v for k, v in ARGS.items() if k != 'reduction_percent'}, 400),
             ('Compare monthly spending', 'spending_comparison', {'period': 'month'}, 200),
         ]:
-            self.queue.extend([envelope(routed(name, args)), envelope(explained())])
+            self.queue.append(envelope(routed(name, args)))
             result = await self.ask(question)
             self.assertEqual(result['mode'], 'llm')
             data = result['cards'][0]['data']
@@ -218,10 +214,10 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
             result = await self.ask('What about 10%?', **kwargs)
             self.assertEqual(result['fallback_reason'], 'conversation_mismatch')
         self.assertEqual(len(self.requests), before)
-        self.queue.append(envelope(routed(arguments={**ARGS, 'reduction_percent': 10})))
         result = await self.ask('What about 10%?', customer=fixture('CUST00001'), conversation=str(uuid4()))
         self.assertEqual(result['fallback_reason'], 'clarification_needed')
         self.assertEqual(result['cards'], [])
+        self.assertEqual(len(self.requests), before)
 
     async def test_privacy_blocking_and_context_expiry(self):
         for question in ['My IBAN is FI2112345600000785', 'Email me at a@example.com', 'My name is Alice Smith',
@@ -233,9 +229,11 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
         await self.ask()
         with self.ledger.transaction() as (db, _):
             db.execute('UPDATE conversations SET updated=?', (time.time() - 1801,))
-        self.queue.append(envelope(routed(arguments={**ARGS, 'reduction_percent': 10})))
+        before, spent = len(self.requests), self.ledger.spent()
         result = await self.ask('What about 10%?')
         self.assertEqual(result['fallback_reason'], 'clarification_needed')
+        self.assertEqual(len(self.requests), before)
+        self.assertEqual(self.ledger.spent(), spent)
 
     async def test_invalid_tools_arguments_and_ungrounded_periods(self):
         for index, message in enumerate([
@@ -248,30 +246,38 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result['cards'], [])
         self.assertEqual(len(self.requests), 4)
 
-    async def test_untrusted_explanation_keeps_python_card(self):
-        self.queue.extend([envelope(routed()), envelope(explained(content='{"text":"You saved EUR 999999"}'))])
+    async def test_untrusted_model_prose_is_rejected_without_explanation_call(self):
+        self.queue.append(envelope({**routed(), 'content': 'You saved EUR 999999'}))
         result = await self.ask()
         self.assertEqual(result['fallback_reason'], 'invalid_model_output')
         self.assertEqual(result['mode'], 'rule_based')
-        self.assertEqual(result['cards'][0]['data']['potential_reduction_eur'], 80)
+        self.assertEqual(result['cards'], [])
         self.assertNotIn('999999', result['text'])
+        self.assertEqual(len(self.requests), 1)
+        self.valid()
+        successful = await self.ask()
+        self.assertEqual(successful['mode'], 'llm')
+        self.assertEqual(successful['cards'][0]['data']['potential_reduction_eur'], 80)
+        self.assertIn('not actual savings', successful['text'])
         self.assertEqual(len(self.requests), 2)
 
     async def test_provider_errors_retain_reservation_no_retries(self):
         self.queue.append(httpx.Response(401, json={'secret': 'never-return-this-provider-body'}))
         result = await self.ask()
         self.assertEqual(result['fallback_reason'], 'provider_error')
+        self.assertEqual(result['cards'][0]['data']['potential_reduction_eur'], 80)
+        self.assertIn('not actual savings', result['text'])
         self.assertNotIn('never-return', json.dumps(result))
         self.assertEqual(len(self.requests), 1)
         self.assertGreater(self.ledger.spent(), 0.14)
         self.queue.append(envelope(routed(), usage=False))
-        self.queue.append(envelope(explained(), usage=False))
         result = await self.ask()
         self.assertEqual(result['mode'], 'llm')
-        self.assertGreater(self.ledger.spent(), 0.42)
+        self.assertEqual(len(self.requests), 2)
+        self.assertEqual(self.ledger.spent(), 0.2804532224)
 
     async def test_missing_usage_restart_reserves_budget_and_wrong_model_freezes(self):
-        self.queue.extend([envelope(routed(), usage=False), envelope(explained(), usage=False)])
+        self.queue.append(envelope(routed(), usage=False))
         result = await self.ask()
         self.assertEqual(result['mode'], 'llm')
         reserved = self.ledger.spent()
@@ -287,13 +293,14 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['fallback_reason'], 'billing_uncertain')
         self.assertEqual(len(self.requests), before)
 
-    async def test_second_call_timeout_preserves_card_and_reservation(self):
-        self.queue.extend([envelope(routed()), httpx.ReadTimeout('simulated timeout')])
+    async def test_first_call_timeout_preserves_reservation_without_retry(self):
+        self.queue.append(httpx.ReadTimeout('simulated timeout'))
         result = await self.ask()
         self.assertEqual(result['mode'], 'rule_based')
         self.assertEqual(result['fallback_reason'], 'timeout')
         self.assertEqual(result['cards'][0]['data']['potential_reduction_eur'], 80)
-        self.assertEqual(len(self.requests), 2)
+        self.assertIn('not actual savings', result['text'])
+        self.assertEqual(len(self.requests), 1)
         self.assertGreater(self.ledger.spent(), 0.14)
 
     async def test_total_deadline_duplicate_inflight_and_global_concurrency(self):
@@ -315,7 +322,7 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['fallback_reason'], 'timeout')
         self.assertLess(time.monotonic() - start, .5)
         # Slow local preparation may exhaust the deadline before the provider starts.
-        self.assertIn(len(self.requests), (2, 3))
+        self.assertIn(len(self.requests), (1, 2))
 
     async def test_completed_duplicates_restart_and_conflict(self):
         self.valid()
@@ -326,10 +333,10 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
         duplicate = await self.ask(request_id=request_id)
         self.assertEqual(result, duplicate)
         self.assertEqual(self.ledger.spent(), spent)
-        self.assertEqual(len(self.requests), 2)
+        self.assertEqual(len(self.requests), 1)
         conflicting = await self.ask('What about 10%?', request_id=request_id)
         self.assertEqual(conflicting['fallback_reason'], 'request_conflict')
-        self.assertEqual(len(self.requests), 2)
+        self.assertEqual(len(self.requests), 1)
 
     async def test_budget_exhaustion_rate_limit_and_disabled_fallback(self):
         with self.ledger.transaction() as (db, _):
@@ -337,6 +344,8 @@ class CoachLLMTests(unittest.IsolatedAsyncioTestCase):
         for _ in range(4):
             result = await self.ask()
             self.assertEqual(result['fallback_reason'], 'budget_exhausted')
+            self.assertEqual(result['mode'], 'rule_based')
+            self.assertEqual(result['cards'][0]['data']['potential_reduction_eur'], 80)
         result = await self.ask()
         self.assertEqual(result['fallback_reason'], 'rate_limited')
         self.assertEqual(self.requests, [])
@@ -351,8 +360,7 @@ class CoachRouteTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             ledger = Ledger.initialize(Path(directory) / 'usage.sqlite3', identity())
             sent = []
-            queue = [envelope(routed()), envelope(explained()),
-                     envelope(routed(arguments={**ARGS, 'reduction_percent': 10})), envelope(explained())]
+            queue = [envelope(routed()), envelope(routed(arguments={**ARGS, 'reduction_percent': 10}))]
             async def handler(request):
                 sent.append(json.loads(request.content))
                 return httpx.Response(200, json=queue.pop(0))
@@ -383,13 +391,13 @@ class CoachRouteTests(unittest.TestCase):
                     first = client.post(base + '/coach', json=request).json()
                     self.assertEqual(first['mode'], 'llm')
                     self.assertEqual(client.post(base + '/coach', json=request).json(), first)
-                    self.assertEqual(len(sent), 2)
+                    self.assertEqual(len(sent), 1)
                     followup = client.post(base + '/coach', json={**request, 'request_id': str(uuid4()),
                                                                 'question': 'What about 10%?'}).json()
                     self.assertEqual(followup['cards'][0]['data']['potential_reduction_eur'], 40)
                     other = client.post('/api/customers/CUST00001/coach', json={**request, 'request_id': str(uuid4())}).json()
                     self.assertEqual(other['fallback_reason'], 'conversation_mismatch')
-                    self.assertEqual(len(sent), 4)
+                    self.assertEqual(len(sent), 2)
                     self.assertNotIn('Private goal name', json.dumps(sent))
                     for name, value in before.items():
                         self.assertEqual(client.get(base + '/' + name).json(), value)

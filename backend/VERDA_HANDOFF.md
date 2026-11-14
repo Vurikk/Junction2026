@@ -56,38 +56,40 @@ Private state and SQLite sidecars are gitignored; no raw records or prompts are 
 Every provider call first atomically reserves its worst-case cost using `BEGIN IMMEDIATE` and integer pico-euros.
 Input reservation is the **entire documented model context**, not an estimated chars/token count. This covers user text,
 context, system messages, tools, aggregates, schema serialization and chat-template overhead. Output reserves all 256 allowed tokens.
-At the reviewed rates, each call reserves EUR **0.1402266112**, up to EUR **0.2804532224** for two uncertain calls.
+At the reviewed rates, the single call per message reserves EUR **0.1402266112** before execution.
 Actual complete token usage reconciles the reservation down; cached input is conservatively charged at the full input rate.
 Missing/malformed usage, non-200 responses, disconnects, timeouts and crashes keep their full reservations.
 Unpriced response models or usage exceeding reviewed bounds freeze subsequent spending for review.
 No blind refund on errors, no daily/customer reset, no new ledger on restart, and no retries/redirects inside the provider client.
 
-Limits: at most **two calls per message**, **256 tokens per call**, **15 seconds total**, **one active message**,
+Limits: at most **one call per message**, **256 tokens per call**, **15 seconds total**, **one active message**,
 **four new paid-path request attempts per browser session/minute**, and **twelve globally/minute**.
 Rate receipts, request claims and reservations survive restarts. Byte limits bound outgoing payloads and incoming responses.
 A crash after claiming a request leaves it in progress; replay falls back without another paid call. Manual review may be needed.
-A failed second call can still return the already-computed Python result card and rule-based explanation.
+There is no explanation provider call; successful calculations produce their Python card and deterministic explanation locally.
 
 ## Privacy and grounding
 
-The first call can select exactly one of `category_spending`, `spending_comparison`, `category_reduction`.
+The sole call can select exactly one of `category_spending`, `spending_comparison`, `category_reduction`.
 Pydantic rejects extra arguments, invalid types, dates and percentages. Category/date/percentage must also match the
 sanitized question or the same conversation's previous validated selection. No arbitrary function, URL, code or write tool exists.
+Ambiguous selections and unsupported category/period calculations are checked locally before a paid request. They return
+clarification or missing-data fallback without a provider call or reservation; valid requests still require model selection validation.
 
-The outbound text filter accepts a deliberately small English financial vocabulary, dates and percentages.
-Names, IDs, email addresses, account details, URLs, arbitrary amounts, multiline pasted data, unknown prose and non-ASCII text
-are blocked rather than guessing which parts are safe to remove. A blocked request sends no content to Verda.
-This intentionally limits free-form language support in the first version; the UI should offer clear sample questions.
+The language layer supports a constrained English financial vocabulary, dates and percentages. It rebuilds the question as
+canonical JSON containing only intent, categories, period, dates, date_mode and percentages; original prose is never forwarded.
+Names, IDs, email addresses, account details, URLs, arbitrary amounts, pasted data and uncertain language remain local.
+The semantic projection, not a claim that regex identifies all personal information, defines the outbound boundary.
+Finnish and unrestricted free-form language are not supported. See LANGUAGE_HANDOFF.md for examples and limitations.
 
-Only explicit aggregate Python facts go to the explanation call; the entire card is not resent. No customer/account/goal IDs or goal names,
-transaction rows, merchant data, transaction classifications, assumptions or full chat transcripts are sent.
+Only canonical request slots and validated routing context go to Verda. Calculated financial facts are rendered locally.
+No customer/account/goal IDs or goal names, transaction rows, merchant data, classifications, assumptions or full transcripts are sent.
 Conversation context is only the previous validated tool selection; it expires after 30 minutes and is scoped to browser session/customer.
 At most 32 conversation IDs are accepted per browser session. Durable request receipts remain for restart-safe deduplication.
 
-The second call selects/orders **fact IDs from Python-generated facts**, not arbitrary prose. Python renders all dates, percentages
-and money and always appends required coverage/hypothetical caveats. Fabricated numerical text or extra response fields are rejected.
-`mode: "llm"` means model-selected tools and fact ordering; it does not imply unconstrained generated financial advice.
-Result cards are independent of that explanation and remain renderable when explanation generation fails.
+Python renders every explanation with the summary first and all required coverage/hypothetical caveats. Model prose is rejected.
+`mode: "llm"` means an LLM selected a validated tool and its calculation succeeded, not that the model generated financial advice.
+Cards remain independent of their Python-rendered explanation. Provider failures use the local rule-based fallback.
 
 ## Additive Coach contract for the UI owner
 
@@ -106,7 +108,9 @@ request_id: UUID string
 cards: [{type: "category_spending" | "spending_comparison" | "category_reduction", data: object}]
 ```
 
-`cards` is empty when no approved function completed. It may be nonempty with `mode: "rule_based"` after an explanation failure.
+`cards` is empty when no approved function completed. A locally validated calculation remains present with
+`mode: "rule_based"` if provider/timeout/budget/billing gates fail after preflight, or durable response caching fails.
+Model-output validation failures do not expose the candidate card. Render valid returned cards independently of the mode label.
 Card `data` fields are exact allowlists, not the full source endpoint objects:
 
 | Card type | Data fields |
@@ -114,6 +118,10 @@ Card `data` fields are exact allowlists, not the full source endpoint objects:
 | category_spending | currency, category, period, source_period {start,end}, spending_eur |
 | spending_comparison | currency, period, status, comparison, baseline, difference_eur, coverage |
 | category_reduction | currency, category, period, source_period, reduction_percent, and the three amounts listed below |
+
+For a category-spending breakdown, `category: "all"` adds up to five `categories` entries (`category`, `spending_eur`)
+and `other_spending_eur`, the sum outside the displayed top five. Displayed amounts plus remainder equal `spending_eur`.
+The generic displayed category `other` groups unknown source labels; it is distinct from the undisplayed remainder.
 
 Reduction amount fields: `baseline_spending_eur`, `hypothetical_spending_eur`, `potential_reduction_eur`.
 Comparison nested objects match `/spending-comparison`; reduction amounts/dates match `/category-reduction`.
@@ -174,7 +182,7 @@ In another terminal, from this checkout, the **one controlled smoke command afte
 ```
 
 It bootstraps a browser session for free, then submits one message about Restaurants in July 2026 for CUST04457 at 20% reduction.
-Expected card: baseline EUR 95.04, hypothetical EUR 76.03, potential reduction EUR 19.01. Maximum two paid provider calls.
+Expected card: baseline EUR 95.04, hypothetical EUR 76.03, potential reduction EUR 19.01. Maximum one paid provider call.
 The script saves its session/request identity before the paid request; repeating the command replays that identity, not a new paid turn.
 It prints only mode, safe fallback reason and aggregate cards. A fallback is not automatically retried with new IDs.
 Inspect cumulative reserved/charged euros using `python -m backend.verda_setup --status` with COACH_LLM_BUDGET_EUR still set.
@@ -190,8 +198,9 @@ Run the existing modules plus `backend.test_verda` with the original datasets av
 .venv/Scripts/python.exe -m unittest discover -s backend -p "test_*.py" -v
 ```
 
-Result on 2026-11-14: **49 tests passed**, including 19 mocked Verda tests and all existing dataset-backed checks.
+Original delivery: 49 tests passed. Combined integration on 2026-11-14: **83 tests passed** with paid mode forced off,
+both original datasets and mocked provider transport, including language, single-call and routing regression coverage.
 Coverage includes all three selections, follow-up preservation, browser/customer isolation, privacy rejection,
-invalid tools/arguments/numerical prose, errors/timeouts, cards surviving explanation failure, concurrent near-cap reservations,
+invalid tools/arguments/numerical prose, errors/timeouts, deterministic cards surviving provider/budget failure, concurrent near-cap reservations,
 restart persistence, missing usage, model/bound violations, OS instance locks, global/session limits, duplicates and legacy compatibility.
 Real provider behavior remains unverified until the single controlled live smoke test is reviewed and explicitly run.

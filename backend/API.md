@@ -142,8 +142,11 @@ returned conversation/request IDs and `cards` containing validated Python aggreg
 The first request establishes an HttpOnly session cookie; paid calls require a supplied conversation ID and that cookie.
 Keep the same IDs/body on retries; use a new request ID for a new turn and a new conversation on customer change.
 
-Only category spending, spending comparison and category reduction are approved tools. Model explanations select validated
-Python fact IDs; all financial values and result cards remain calculated/rendered by Python. No automatic goal/input changes.
+Only category spending, spending comparison and category reduction are approved tools. One model call selects a validated
+tool; Python calculates the card and renders its explanation. There is no second explanation call or automatic goal/input change.
+Outbound requests contain canonical intent/category/date/percentage slots and validated context, never the user's raw prose.
+Category-spending cards with `category: "all"` also contain up to five `categories` entries and `other_spending_eur`;
+listed entries plus that remainder equal `spending_eur`. The remainder is not a second copy of the displayed `other` category.
 The user-approved cumulative limit is **EUR 1.00**, replacing the earlier USD wording. Paid deployment requires explicit local review,
 a persistent host-bound SQLite ledger, and `COACH_LLM_BUDGET_EUR`; the old USD variable does not enable paid calls.
 

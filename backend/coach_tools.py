@@ -116,7 +116,8 @@ def sanitize_question(question):
             or (words & set(MONTHS) and not dates) or 'year' in words):
         date_mode = 'ambiguous'
     uncertain_percent = bool(percentages and words and not (words & (REDUCTION_WORDS | {'about', 'instead'})))
-    if (len(categories) > 1 or len(percentages) > 1 or words & {'without', 'not', 'points', 'more', 'up'}
+    unsupported_increase = bool(words & {'more', 'up'}) and not (comparison and not reduction and not categories)
+    if (len(categories) > 1 or len(percentages) > 1 or words & {'without', 'not', 'points'} or unsupported_increase
             or re.search(r'\bto\s+\d+(?:\.\d+)?\s*(?:%|percent)', value) or uncertain_percent
             or (comparison and (reduction or (categories and categories != ['all'])))):
         intent = 'clarify'
@@ -221,6 +222,23 @@ def expected_selection(question, prior, customer):
             raise GateError('clarification_needed')
         args['reduction_percent'] = str(Decimal(str(values[0])))
     return {'name': request.intent, 'arguments': args}
+
+
+def clarification_text(question, prior):
+    """One local follow-up, without sending uncertain content to the provider."""
+    request = LanguageRequest.model_validate_json(question)
+    old = (safe_prior(prior) or {}).get('arguments', {})
+    if request.categories == ['food'] and old.get('category') not in {'restaurants', 'groceries'}:
+        return 'Do you mean groceries or restaurants?'
+    if request.intent == 'clarify' or request.date_mode == 'ambiguous':
+        return 'Please choose one category and one recorded month or week to explore.'
+    if request.intent != 'spending_comparison' and not request.categories and not old.get('category'):
+        return 'Which spending category would you like to explore?'
+    if request.date_mode == 'missing' and not old.get('period_start') and request.categories != ['all']:
+        return 'Which recorded month or week should I use? For example, July 2026.'
+    if request.intent == 'category_reduction' and not request.percentages and old.get('reduction_percent') is None:
+        return 'What percentage would you like to reduce that spending by?'
+    return 'Please choose a supported recorded period and a reduction between 0% and 100%.'
 
 
 def selection(message, question, prior, customer):
