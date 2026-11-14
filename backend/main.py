@@ -351,3 +351,9 @@ def default_spending_estimate(request: Request, customer_id: str):
 @app.post("/api/customers/{customer_id}/spending-estimate")
 def calculate_spending_estimate(request: Request, customer_id: str, payload: SpendingEstimateInput):
     return estimate_for(request, customer_id, payload)
+
+
+@app.get("/api/customers/{customer_id}/automatic-demo-budget")
+def automatic_demo_budget(request: Request, customer_id: str):
+    from .automatic_demo_budget import automatic_budget
+    return automatic_budget(customer_for(request, customer_id), request.app.state.goals[customer_id])

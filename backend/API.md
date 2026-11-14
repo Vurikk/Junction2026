@@ -185,3 +185,12 @@ See [SPENDING_ESTIMATE_HANDOFF.md](SPENDING_ESTIMATE_HANDOFF.md) for exact UI co
 Neither endpoint saves inputs, changes goals, calls a provider, nor changes the existing confirmed-plan `/budget` contract.
 Current mode requires accessible funds, reserve and the TOTAL essential bills due within the selected horizon.
 Historical bill/purchase references are automatic, dated estimates; current bills are never automatically prorated.
+
+## Automatic historical demo budget (default goal-driven flow)
+
+`GET /api/customers/{id}/automatic-demo-budget`: no money inputs, no goals -> needs_goal / Create a goal.
+Returns extra spending above protected usual spending, using the same latest three complete recorded months,
+explicit 10% income reserve-building and 50% remaining-surplus goal allocation app policies.
+Not today's affordability; current reserve adequacy and active debt remain unknown. No balances are added to income.
+See [AUTOMATIC_BUDGET_HANDOFF.md](AUTOMATIC_BUDGET_HANDOFF.md) for exact schema, arithmetic, examples and 39-test evidence.
+Existing confirmed manual plans, cash-only draft endpoint, goals and Coach runtime are unchanged.
