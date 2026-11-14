@@ -4,7 +4,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from Customer import Customer
+if __package__:
+    from .Customer import Customer
+else:
+    from Customer import Customer
 
 
 DATA_DIR = Path(__file__).resolve().parent / "Data"

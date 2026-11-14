@@ -1,5 +1,11 @@
 # Ignore customer data
 Data/
+data/
+datasets/
+*.csv
+*.tsv
+*.parquet
+*.feather
 
 # Python cache files
 __pycache__/
@@ -8,7 +14,16 @@ __pycache__/
 # Virtual environments
 .venv/
 venv/
+env/
+ENV/
 
 # IDE files
 .idea/
 .vscode/
+
+# Web build and local configuration
+node_modules/
+dist/
+.env
+.env.*
+*.log
