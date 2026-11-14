@@ -27,3 +27,8 @@ dist/
 .env
 .env.*
 *.log
+
+# Private LLM review, cumulative usage and request ledger (never reset to regain budget)
+.coach_llm/
+*.sqlite3
+*.sqlite3-*

@@ -1,6 +1,7 @@
 """Synthetic edge cases and HTTP validation; no original datasets needed."""
 
 from copy import deepcopy
+import os
 from datetime import date
 from unittest import TestCase, main
 from unittest.mock import patch
@@ -66,6 +67,19 @@ class DataCoachTests(TestCase):
         customer._transactions = customer._transactions.drop(columns="balance_after_eur")
         self.assertTrue(all(a["balance_eur"] is None for a in recorded_balances(customer)["accounts"]))
 
+    def test_missing_balance_column_preserves_known_timestamp(self):
+        customer = fixture()
+        expected_at = recorded_balances(customer, date(2026, 11, 14))["accounts"][0]["recorded_at"]
+        customer._transactions = customer._transactions.drop(columns="balance_after_eur")
+        result = recorded_balances(customer, date(2026, 11, 14))
+        account = result["accounts"][0]
+        self.assertEqual(account["recorded_at"], expected_at)
+        self.assertIsNotNone(account["age_days"])
+        self.assertIsNone(account["balance_eur"])
+        self.assertEqual(account["status"], "unavailable")
+        self.assertFalse(account["is_current"])
+        self.assertIsNone(result["simultaneous_total_eur"])
+
     def test_comparison_excludes_target_partial_period_and_transfers(self):
         result = spending_comparison(fixture(), "month")
         self.assertEqual(result["comparison"], {"start": "2024-04-01", "end": "2024-04-30", "spending_eur": 400})
@@ -116,6 +130,32 @@ class DataCoachTests(TestCase):
         self.assertEqual(reserve["confirmed_value_eur"], "0.00")
         self.assertNotIn("emergency_reserve_eur", result["missing_inputs"])
 
+    def test_suggestions_missing_category_leap_boundary_and_excluded_transfers(self):
+        customer = fixture(records=[
+            ("2023-12-15", "purchase", -999, "Groceries", "one", 0),
+            ("2024-01-01", "salary", 1000, "income", "one", 0),
+            ("2024-01-02", "housing_payment", -100, "Housing", "one", 0),
+            ("2024-01-03", "purchase", -10, "Groceries", "one", 0),
+            ("2024-02-01", "salary", 1000, "income", "one", 0),
+            ("2024-02-02", "transfer", 9999, "income", "one", 0),
+            ("2024-02-03", "investment_deposit", -9999, "Groceries", "one", 0),
+            ("2024-02-04", "utilities_payment", -300, "Utilities", "one", 0),
+            ("2024-02-29", "purchase", -30, "Groceries", "one", 0),
+            ("2024-02-29", "purchase", -50, None, "one", 0),
+            ("2024-03-10", "transfer", 0, "transfer", "one", 0),
+        ])
+        result = planning_suggestions(customer, Assumptions().model_dump(mode="json"))
+        observations = result["observations"]
+        self.assertEqual(observations["income"]["source_period"], {"start": "2024-01-01", "end": "2024-02-29"})
+        for key, expected in [("income", 1000), ("housing_utilities", 200), ("food", 20), ("everyday_purchases", 45)]:
+            self.assertEqual(observations[key]["average_monthly_eur"], expected)
+            self.assertEqual(observations[key]["period_count"], 2)
+            self.assertFalse(observations[key]["confirmed"])
+        comparison = spending_comparison(customer, "month")
+        self.assertEqual(comparison["comparison"]["spending_eur"], 380)
+        self.assertEqual(comparison["baseline"]["average_spending_eur"], 110)
+        self.assertEqual(comparison["difference_eur"], 270)
+
     def test_reduction_bounds_rounding_and_non_mutation(self):
         customer = fixture()
         before = customer.get_transactions()
@@ -152,6 +192,9 @@ class DataCoachTests(TestCase):
 
 class DataCoachApiTests(TestCase):
     def setUp(self):
+        disabled = patch.dict(os.environ, {'COACH_LLM_ENABLED': 'false'})
+        disabled.start()
+        self.addCleanup(disabled.stop)
         loader = patch("backend.main.load_customers", return_value=[fixture(), fixture("CUST00001")])
         self.addCleanup(loader.stop)
         loader.start()

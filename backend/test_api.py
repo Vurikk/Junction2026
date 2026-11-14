@@ -1,6 +1,8 @@
 """API integration tests with the two local demo customers; never print raw records."""
 
 import unittest
+import os
+from unittest.mock import patch
 from decimal import Decimal
 
 import pandas as pd
@@ -12,6 +14,9 @@ from backend.main import app
 class ApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        disabled = patch.dict(os.environ, {'COACH_LLM_ENABLED': 'false'})
+        disabled.start()
+        cls.addClassCleanup(disabled.stop)
         cls.context = TestClient(app)
         cls.client = cls.context.__enter__()
 

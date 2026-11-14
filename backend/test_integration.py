@@ -1,6 +1,7 @@
 """Real HTTP integration against an isolated Uvicorn process and local demo data."""
 
 import socket
+import os
 import subprocess
 import sys
 import tempfile
@@ -21,6 +22,7 @@ class LiveIntegrationTests(unittest.TestCase):
         cls.process = subprocess.Popen(
             [sys.executable, '-m', 'uvicorn', 'backend.main:app', '--host', '127.0.0.1', '--port', str(port)],
             cwd=Path(__file__).resolve().parents[1], stdout=cls.log, stderr=cls.log,
+            env={**os.environ, 'COACH_LLM_ENABLED': 'false'},
         )
         cls.client = httpx.Client(base_url=f'http://127.0.0.1:{port}', timeout=30, trust_env=False)
         cls.addClassCleanup(cls.cleanup)
@@ -119,6 +121,44 @@ class LiveIntegrationTests(unittest.TestCase):
                 other_id = 'CUST00001' if customer['customer_id'] == 'CUST04457' else 'CUST04457'
                 other_base = f'/api/customers/{other_id}'
                 other_goals = self.client.get(f'{other_base}/goals').json()
+                # Pin the original-data demo recipe and verify previews with a confirmed, nonzero plan.
+                restaurant_demo = {
+                    'CUST04457': ('2026-07-01', 95.04, 76.03, 19.01),
+                    'CUST00001': ('2026-09-01', 225.70, 180.56, 45.14),
+                }
+                month_start, restaurant_baseline, hypothetical, reduction = restaurant_demo[customer['customer_id']]
+                reduction_payload = dict(category='Restaurants', period='month', period_start=month_start, reduction_percent=20)
+                other_inputs = self.client.get(f'{other_base}/assumptions').json()
+                other_budget = self.client.get(f'{other_base}/budget').json()
+                for percentage in [0, 20, 100, 20]:
+                    response = self.client.post(f'{base}/category-reduction', json={
+                        **reduction_payload, 'reduction_percent': percentage,
+                    })
+                    self.assertEqual(response.status_code, 200)
+                    reduced = response.json()
+                    self.assertEqual(reduced['baseline_spending_eur'], restaurant_baseline)
+                    expected = {0: (restaurant_baseline, 0), 20: (hypothetical, reduction), 100: (0, restaurant_baseline)}
+                    self.assertEqual((reduced['hypothetical_spending_eur'], reduced['potential_reduction_eur']), expected[percentage])
+                    self.assertIsNone(reduced['goal_impact'])
+                    self.assertTrue(reduced['read_only'])
+                for changes, status in [
+                    ({'reduction_percent': -1}, 422), ({'reduction_percent': 101}, 422),
+                    ({'reduction_percent': 'NaN'}, 422), ({'category': 'No such category'}, 404),
+                    ({'period_start': '2024-10-01'}, 422),  # Both original files begin after October 1.
+                ]:
+                    response = self.client.post(f'{base}/category-reduction', json={**reduction_payload, **changes})
+                    self.assertEqual(response.status_code, status)
+                if customer['customer_id'] == 'CUST04457':
+                    absent = self.client.post(f'{base}/category-reduction', json={
+                        **reduction_payload, 'period_start': '2026-08-01',
+                    })
+                    self.assertEqual(absent.status_code, 404)
+                self.assertEqual(self.client.get(f'{base}/goals').json(), before)
+                self.assertEqual(self.client.get(f'{base}/assumptions').json(), assumptions_before)
+                self.assertEqual(self.client.get(f'{base}/budget').json(), budget)
+                self.assertEqual(self.client.get(f'{other_base}/goals').json(), other_goals)
+                self.assertEqual(self.client.get(f'{other_base}/assumptions').json(), other_inputs)
+                self.assertEqual(self.client.get(f'{other_base}/budget').json(), other_budget)
                 for _ in range(2):
                     simulated = ask('Preview this goal', scenario)
                     self.assertEqual(simulated['preview'], scenario)
