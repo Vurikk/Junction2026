@@ -156,6 +156,36 @@ The existing manual backend on 8031 needs a USER restart to load that endpoint. 
 The existing frontend on 5193 points at this checkout and may hot-reload source changes; it was not started/restarted here.
 No live provider requests, paid activation, synthetic goal writes, merges, or deployment were performed.
 
+## Guided coaching delivery (15 November 2026)
+
+Branch: `codex/demo-coach-prompts-ui`, based on `afcc79e`.
+Implementation: `95817ad6b38d8191a0135432817a87fbce79ece6`; this handoff follows separately.
+Manager assigned Coach.jsx, new GuidedCoach files, relevant styles/tests and this handoff before editing.
+
+Changes: `src/Coach.jsx`, `src/GuidedCoach.jsx`, `src/guidedCoach.js`, `src/style.css`,
+`qa/check-guided-coach.mjs`, `qa/check-guided-render.cjs`, `qa/guided-coach.html`, `qa/guided-coach.jsx`.
+
+Guided coaching now offers savings discovery, goal feasibility and everyday habits as conversational turns.
+Savings uses GET savings-opportunities with the returned month pinned for category and 10%/20% follow-ups;
+it never substitutes generic category-reduction for the eligible purchase subset. All figures come from Python.
+Realism guidance protects essentials and reserves without claiming historical reductions are future funds.
+Goal dialogue reads goals plus goal-analysis, shows actual names/targets, priority, allocation/unknown status,
+missing-input next steps and conditional plan periods only with repeat_plan. Capacity is not contribution;
+historical reductions are never added to it. No goals or assumptions change automatically.
+Exact typed starter phrases normalize case/whitespace/trailing punctuation into the same guided paths.
+Dates, amounts, unknown suffixes and other free-text questions retain the existing Coach route.
+Existing explicit goal preview/confirmation, session cookie and retry identity behavior remain intact.
+
+Passed: guided transport/render tests, existing demo-question/session/card tests, Vite production build and diff whitespace check.
+Build retains the existing >500kB warning. No dependencies or backend files changed.
+Mock browser checks on qa/guided-coach.html verified savings/category/10%/20%/realism/goals/missing-input dialogue,
+typed goal starter, empty goals, habits, retry without duplicate user message, disabled in-flight controls,
+and ignoring an abort-ignoring old-customer response. Inspected the fixture at 390px; no horizontal page overflow.
+The fixture uses an in-memory API and makes no backend/provider calls. It does not verify real financial calculations.
+No fresh full-app integration or physical-device keyboard check is claimed. Manager owns disabled backend pairing.
+No servers, credentials, ledger, paid mode or branches were merged/changed by this task.
+Further broad UI checking stopped at the user's request; delivering the completed commits now.
+
 ## Guided conversations and spending-plan scroll fix
 
 Guided UI implementation: 95817ad. Backend pairing: codex/coach-backend-readiness at 2cc7d04.
