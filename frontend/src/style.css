@@ -177,3 +177,16 @@ footer { color: #606b63; }
 .home-chart .section-title h2 { margin-bottom: 0; }
 .planning-context { border-bottom: 1px solid #dfe5df; margin-bottom: 12px; }
 #spending-plan { scroll-margin-top: 16px; }
+.money-card { background: white; border-radius: 14px; padding: 20px 16px 8px; margin: 20px 0 18px; }
+.money-card .recorded-balance { padding: 0 2px 18px; }
+.coach-allowance-group { background: #d7efdf; border-radius: 12px; padding: 16px; }
+.coach-allowance-group section { background: transparent; padding: 0; margin: 0; }
+.coach-allowance-group .coach-overview { display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding-bottom: 18px; margin-bottom: 16px; border-bottom: 1px solid #bedcca; }
+.coach-allowance-group .coach-overview h2 { font-size: 18px; margin: 0; }
+.coach-allowance-group .coach-action { width: auto; flex-shrink: 0; gap: 6px; padding: 8px 10px;
+  font-size: 12px; min-height: 38px; border-radius: 7px; }
+.coach-allowance-group .allowance-heading { flex-wrap: wrap; }
+.coach-allowance-group .allowance-track { background: #bdd4c5; }
+.coach-allowance-group .allowance-toggle button[aria-pressed='true'] { background: white; }
+.money-details > summary { color: #626862; font-size: 12px; padding: 12px 2px; }

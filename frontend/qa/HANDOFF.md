@@ -1,5 +1,20 @@
 # S-mobiili-inspired coaching UI
 
+## Latest visual follow-up: combined card
+
+Per direct user feedback, Balance, Financial coach and Safe to spend now share one white card.
+Coach and allowance share an inner green surface. Ask Coach is compact with a four-point star.
+Visible balance label is simply Balance. Historical dates, source caveats and structured comparison
+text remain accessible in the collapsed Details section rather than the default summary.
+The neutral usage track and estimated label remain honest; no financial semantics changed.
+The star is visual styling; Coach still explicitly identifies its rule-based implementation.
+
+Production build and `node frontend/qa/check-home.cjs` pass. Browser checked at actual CSS widths
+360/390 with no horizontal overflow, and the smaller Ask Coach button opens the prefilled Coach.
+Updated Home screenshots show the combined card; `home-chart-390.jpg` documents the prior layout
+and is retained only as earlier-pass evidence. Both-profile and confirmation tests from the data
+integration pass below were not repeated for this presentation-only grouping change.
+
 ## Current handoff: data-backed compact Home (14 November 2026)
 
 Implemented after the PM merged `origin/main` b9a6e39 into this UI branch (merge b30f56c).

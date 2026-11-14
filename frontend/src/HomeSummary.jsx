@@ -13,48 +13,55 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
   const headline = headlines[comparison?.status] || 'Let’s explore your spending';
   const allowance = range === 'Today' ? budget?.daily_eur : budget?.weekly_eur;
   return <>
-    <section className="recorded-balance"><h1>Recorded balance</h1>
+    <div className="money-card">
+    <section className="recorded-balance"><h1>Balance</h1>
       {balances?.simultaneous_total_eur != null ? <>
         <strong>{money(balances.simultaneous_total_eur)}</strong>
-        <p className="fine">As of {date(balances.total_recorded_at)} · Historical snapshot</p>
       </> : balances?.accounts?.length ? balances.accounts.map((account, index) => <div key={account.account_id}>
         <p className="fine">Account {index + 1}</p><strong>{money(account.balance_eur)}</strong>
-        <p className="fine">As of {date(account.recorded_at)} · Historical snapshot</p>
-      </div>) : <><strong>Not available</strong><p className="fine">No recorded balance available.</p></>}
-      <details><summary>About this balance</summary><p>{balances?.note || 'This is not a live bank balance.'}</p>
-        {balances?.simultaneous_total_eur == null && <p>{balances?.total_unavailable_reason}</p>}</details>
+      </div>) : <strong>Not available</strong>}
     </section>
-    <section className="coach-overview"><p className="coach-kicker">Your financial coach</p><h2>{headline}</h2>
+    <div className="coach-allowance-group">
+    <section className="coach-overview"><h2>Financial coach</h2>
+      <button className="primary coach-action" onClick={() => openCoach('Spending by category')}>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 1 15 9 23 12 15 15 12 23 9 15 1 12 9 9Z" /></svg>Ask Coach</button>
+    </section>
+    <section className="allowance-summary"><div className="allowance-heading"><h2>Safe to spend</h2>
+      <div className="allowance-toggle">{['Today', 'Week'].map(value =>
+        <button key={value} aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}</div></div>
+      <strong className="allowance-amount">{money(allowance)}</strong>
+      <p className="fine">Estimated {range === 'Today' ? 'per day' : 'per week'}</p>
+      <div className="allowance-track" aria-hidden="true" />
+      <p className="fine">Usage tracking unavailable</p>
+      <button className="text-button" onClick={onPlan} disabled={!data.assumptions}>
+        {allowance == null ? 'Complete your spending plan' : 'Review your spending plan'} ›</button>
+      {budget?.shortfall_eur > 0 && <p role="alert">Bills and reserve shortfall: {money(budget.shortfall_eur)}</p>}
+    </section>
+    </div>
+    <details className="money-details"><summary>Details</summary>
+      <h3>Balance source</h3>
+      <p>{balances?.note || 'This is not a live bank balance.'}</p>
+      {balances?.simultaneous_total_eur != null ? <p>As of {date(balances.total_recorded_at)} · Historical snapshot</p>
+        : <><p>{balances?.total_unavailable_reason}</p>{balances?.accounts?.map((account, index) =>
+          <p key={account.account_id}>Account {index + 1}: {date(account.recorded_at)} · Historical snapshot</p>)}</>}
+      <h3>{headline}</h3>
       <p>{comparison?.comparison && comparison?.baseline && headlines[comparison.status]
         ? `${date(comparison.comparison.start)}–${date(comparison.comparison.end)}: ${money(comparison.comparison.spending_eur)} spent.`
         : 'A comparison is unavailable; explore the spending we have recorded.'}</p>
-      <button className="primary coach-action" onClick={() => openCoach('Spending by category')}>Ask Coach <span>→</span></button>
-      <details><summary>Comparison details</summary>
         <p>Prior-period average: {money(comparison?.baseline?.average_spending_eur)}.</p>
         <p>Signed difference: {money(comparison?.difference_eur)}.</p>
         <p>{comparison?.baseline && `${comparison.baseline.start}–${comparison.baseline.end}, `}
           {comparison?.baseline?.period_count != null && `${comparison.baseline.period_count} prior periods.`}</p>
         <p>{comparison?.note || comparison?.insufficient_data_reason || 'Comparison data is unavailable.'}</p>
         <p>Rule-based demo. Historical spending is not a measure of goal progress.</p>
-      </details>
-    </section>
-    <section className="allowance-summary"><div className="allowance-heading"><h2>Safe to spend</h2>
-      <div className="allowance-toggle">{['Today', 'Week'].map(value =>
-        <button key={value} aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}</div></div>
-      <strong className="allowance-amount">{money(allowance)}</strong>
-      <p className="fine">Estimated {range === 'Today' ? 'per day' : 'per week'} · Includes everyday costs</p>
-      <div className="allowance-track" aria-hidden="true" />
-      <p className="fine">Usage tracking unavailable</p>
-      <button className="text-button" onClick={onPlan} disabled={!data.assumptions}>
-        {allowance == null ? 'Complete your spending plan' : 'Review your spending plan'} ›</button>
-      <details><summary>Estimate details</summary>
+      <h3>Estimate details</h3>
         <p>{budget?.status === 'estimated' ? `Based on your confirmed ${budget.assumptions.horizon_days}-day plan.`
           : 'All six planning amounts need confirmation. Blank amounts remain unknown.'}</p>
-        <p>Today selects the daily estimate, not a live remaining balance. Payment timing is not modeled.
+        <p>Includes everyday costs. Today selects the daily estimate, not a live remaining balance. Payment timing is not modeled.
           No consumed fraction is available, so the neutral track does not show progress.</p>
-      </details>
-      {budget?.shortfall_eur > 0 && <p role="alert">Bills and reserve shortfall: {money(budget.shortfall_eur)}</p>}
-    </section>
+    </details>
+    </div>
     <section className="home-chart"><div className="section-title"><h2>Spending history</h2>
       <button className="text-button" onClick={onSpending}>View all ›</button></div>
       {history?.periods?.length ? <>
