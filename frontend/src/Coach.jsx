@@ -58,7 +58,7 @@ export default function Coach({ customer, api, money, onSaved, initialQuestion =
         return result.kind === 'scenario' && !result.preview && !result.cards?.length && /\bgoal\b/i.test(text)
           ? [...previous.filter(item => !item.tool), answer, { tool: 'goal' }] : [...previous, answer];
       });
-      if (['request_in_progress', 'rate_limited', 'concurrency_limit'].includes(result.fallback_reason)) {
+      if (['request_in_progress', 'rate_limited'].includes(result.fallback_reason)) {
         setError(fallbackNotice(result.fallback_reason)); setRetry({ text, scenario, userText, turn });
       }
       setPreview(result.preview || null);

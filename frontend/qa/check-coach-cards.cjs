@@ -28,4 +28,7 @@ const unknown = render({ type: 'spending_comparison', data: { status: 'insuffici
   comparison: null, baseline: null, difference_eur: null } });
 assert.match(unknown, /Not available/);
 assert.doesNotMatch(unknown, /EUR 0.00/);
+const comparison = render({ type: 'spending_comparison', data: { status: 'above', comparison: { ...dates, spending_eur: 20 },
+  baseline: { start: '2026-01-01', end: '2026-06-30', average_spending_eur: 10 }, difference_eur: 10 } });
+for (const text of ['2026-07-01', '2026-07-31', '2026-01-01', '2026-06-30', 'EUR 10.00']) assert.ok(comparison.includes(text));
 console.log('Coach card rendering checks passed: ranking, exact reduction, zero, unknown, source dates and caveats.');

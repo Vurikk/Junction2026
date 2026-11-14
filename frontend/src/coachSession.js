@@ -39,11 +39,22 @@ export function coachModeLabel(item) {
 }
 
 export function fallbackNotice(reason) {
+  if (reason === 'clarification_needed') return 'Please clarify the category, period or percentage in your next message.';
+  if (reason === 'unsupported_period_or_category') return 'Recorded data is unavailable for that category or period.';
+  if (reason === 'request_conflict') return 'This message could not be replayed safely. It was not automatically resubmitted.';
+  if (reason === 'session_limit') return 'This browser session has reached its conversation limit.';
+  if (['session_initialized', 'conversation_required'].includes(reason)) {
+    return 'The conversation could not finish starting. No automatic new request will be made.';
+  }
+  if (reason === 'unsupported_topic') return 'This topic uses the local Coach. Try a supported spending question or guided preview.';
   if (reason === 'budget_exhausted') return 'AI budget reached. Showing the rule-based answer.';
   if (['provider_error', 'timeout', 'invalid_model_output', 'billing_uncertain'].includes(reason)) {
     return 'AI is unavailable. Showing the rule-based answer.';
   }
-  if (['rate_limited', 'concurrency_limit', 'request_in_progress'].includes(reason)) {
+  if (reason === 'concurrency_limit') {
+    return 'Coach could not process this message while another was active. This result is final for this request.';
+  }
+  if (['rate_limited', 'request_in_progress'].includes(reason)) {
     return 'Coach is busy. You can retry this same message.';
   }
   if (reason === 'privacy_blocked') return 'Please ask without personal details or pasted transaction records.';
