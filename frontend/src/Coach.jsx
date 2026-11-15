@@ -1,3 +1,4 @@
+import CoachQuestionSearch from './CoachQuestionSearch';
 import CoachSavingsChart from './CoachSavingsChart';
 import React, { useEffect, useRef, useState } from 'react';
 import CoachSpendingChart from './CoachSpendingChart';
@@ -100,6 +101,7 @@ export default function Coach({ customer, api, money, open = true, initialQuesti
     {messages.length > 0 && <button className="guided-more" disabled={busy}
       onClick={() => setShowQuestions(value => !value)} aria-expanded={showQuestions}>
       {showQuestions ? 'Hide questions' : 'Ask another question'}</button>}
+    <CoachQuestionSearch key={customer} busy={busy} onAsk={ask} />
     <p className="guided-footer">Preset questions. Real recorded figures. Nothing is saved or changed.</p>
   </section>;
 }

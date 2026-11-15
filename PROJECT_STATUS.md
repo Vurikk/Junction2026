@@ -240,3 +240,5 @@ Copy-ready task prompt:
 - Render deployment prepared: Docker frontend/backend, private 31,448-byte two-customer bundle; parity and static API checks passed. Not deployed. Docker build awaits Render verification.
 
 - Coach now shows six-month hypothetical category saving lines and first-month goal allocation bars. Python owns savings projection; existing goal allocations reused. Ten tests and build passed; both charts visually verified.
+
+- Coach question search restored: local typing suggestions route only to supported deterministic actions. Microphone displays future-feature notice, never records. Build, matching checks and browser flow passed.

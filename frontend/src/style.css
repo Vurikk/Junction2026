@@ -309,3 +309,14 @@ footer { color: #606b63; }
 .spending-tooltip { background: white; border: 1px solid #d6ddd8; border-radius: 10px; padding: 10px 12px;
   box-shadow: 0 3px 12px #00000012; max-width: min(300px, calc(100vw - 32px)); }
 .spending-tooltip p { margin: 3px 0; }
+
+.coach-question-search { flex-shrink: 0; margin-top: 8px; }
+.coach-search-form { display: flex; gap: 8px; align-items: center; }
+.coach-search-form input { flex: 1; min-width: 0; margin: 0; font-size: 16px; }
+.coach-search-form .coach-microphone { width: 44px; min-height: 44px; padding: 8px; flex-shrink: 0;
+  display: grid; place-items: center; background: #eaf5ed; color: #006c3c; }
+.coach-search-results { display: grid; gap: 4px; max-height: 140px; overflow-y: auto; margin-bottom: 6px; }
+.coach-search-results button { text-align: left; min-height: 36px; padding: 7px 10px; font-size: 13px;
+  background: #f0f7f2; color: #15482e; }
+.coach-search-results p { font-size: 12px; margin: 4px 0; }
+.coach-question-search > p { margin: 6px 0 0; }
