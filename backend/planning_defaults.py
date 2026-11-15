@@ -1,5 +1,5 @@
 """Editable planning drafts from dated observations, never automatic confirmation."""
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 
 from .data_coach import complete_windows, in_window, recorded_balances, total_amount
 from .financial import money, spending_rows
@@ -78,14 +78,18 @@ def planning_defaults(customer, horizon_days=30):
 
 
 def income_remainder(confirmed_income_eur=None, upcoming_essential_bills_eur=None,
-                     everyday_spending_eur=None, voluntary_goal_contribution_eur=None):
+                     everyday_spending_eur=None, voluntary_goal_contribution_eur=None, horizon_days=30):
     required = (confirmed_income_eur, upcoming_essential_bills_eur, everyday_spending_eur)
     included = voluntary_goal_contribution_eur is not None
     remaining = None
     if all(value is not None for value in required):
         remaining = (money(confirmed_income_eur) - money(upcoming_essential_bills_eur)
                      - money(everyday_spending_eur) - money(voluntary_goal_contribution_eur or 0))
-    return {'remaining_income_eur': float(remaining) if remaining is not None else None,
+    daily = (max(remaining, Decimal(0)) / horizon_days).quantize(Decimal('0.01'), rounding=ROUND_DOWN) if remaining is not None else None
+    return {'daily_eur': float(daily) if daily is not None else None,
+            'weekly_eur': float(min(max(remaining, Decimal(0)), daily * 7)) if daily is not None else None,
+            'usage_status': 'unavailable', 'spent_today_eur': None, 'spent_this_week_eur': None,
+            'remaining_income_eur': float(remaining) if remaining is not None else None,
             'goal_contribution_included': included,
             'note': ('After your entered goal contribution. ' if included else 'Before choosing a goal contribution. ')
                     + 'Income only: your existing balance and protected emergency money are not included. '

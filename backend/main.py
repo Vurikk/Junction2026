@@ -256,6 +256,7 @@ def compare_spending(request: Request, customer_id: str, period: Literal["week",
 
 
 class IncomeRemainderInput(Model):
+    horizon_days: int = Field(30, ge=1, le=366)
     confirmed_income_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
     upcoming_essential_bills_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
     everyday_spending_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
