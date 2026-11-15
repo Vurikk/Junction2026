@@ -100,6 +100,16 @@ async def lifespan(app):
     customers = load_customers(os.environ.get("SBANK_DATA_DIR", DATA_DIR))
     app.state.customers = {customer.customer_id: customer for customer in customers}
     app.state.assumptions = {c.customer_id: Assumptions().model_dump(mode='json') for c in customers}
+    from .plan_store import PlanStore
+    plan_path = os.environ.get('SBANK_PLAN_STATE_PATH')
+    app.state.plan_store = PlanStore(plan_path) if plan_path else None
+    app.state.saved_plans = set()
+    if app.state.plan_store:
+        for customer in customers:
+            stored = app.state.plan_store.load(customer.customer_id)
+            if stored is not None:
+                app.state.assumptions[customer.customer_id] = Assumptions.model_validate(stored).model_dump(mode='json')
+                app.state.saved_plans.add(customer.customer_id)
     app.state.goals = {customer.customer_id: [] for customer in customers}
     from .coach_llm import CoachLLM
     app.state.coach_llm = CoachLLM.from_env()
@@ -219,6 +229,12 @@ class Assumptions(Model):
     repeat_plan: bool = False
 
 
+@app.get("/api/customers/{customer_id}/planning-state")
+def planning_state(request: Request, customer_id: str):
+    customer_for(request, customer_id)
+    return {'has_saved_plan': customer_id in request.app.state.saved_plans}
+
+
 @app.get("/api/customers/{customer_id}/assumptions", response_model=Assumptions)
 def get_assumptions(request: Request, customer_id: str):
     customer_for(request, customer_id)
@@ -228,7 +244,11 @@ def get_assumptions(request: Request, customer_id: str):
 @app.put("/api/customers/{customer_id}/assumptions", response_model=Assumptions)
 def set_assumptions(request: Request, customer_id: str, payload: Assumptions):
     customer_for(request, customer_id)
-    request.app.state.assumptions[customer_id] = payload.model_dump(mode="json")
+    stored = payload.model_dump(mode="json")
+    if request.app.state.plan_store:
+        request.app.state.plan_store.save(customer_id, stored)
+    request.app.state.saved_plans.add(customer_id)
+    request.app.state.assumptions[customer_id] = stored
     return payload
 
 

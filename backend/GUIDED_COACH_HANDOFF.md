@@ -30,3 +30,5 @@ Existing goals/assumptions are in memory; new isolated backend processes start w
 No paid requests are used for verification. The existing cumulative euro ledger must remain untouched.
 
 Verification: 119 backend tests passed. Independent offline HTTP QA found no blocker in exclusions, date/percentage handling, privacy, state immutability or goal priority/repeat semantics. Preview backend8032 and frontend5194 are loopback only with paid mode disabled; existing servers were left untouched.
+
+Plan persistence update: preview8032 now configured with SBANK_PLAN_STATE_PATH=C:/Users/vanal/AppData/Local/SBankCoach/plans.sqlite3. Existing nonempty confirmed inputs migrated, unknown defaults not marked saved; existing goals restored across this deployment but remain in-memory. Latest full backend suite:127 tests pass, including restart survival, customer isolation and invalid-save preservation. No billing ledger accessed or reset.
