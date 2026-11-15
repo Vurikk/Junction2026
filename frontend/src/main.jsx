@@ -1,3 +1,4 @@
+import PlanTargetLabel from './PlanTargetLabel.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
@@ -57,8 +58,22 @@ function App() {
       'recorded-balances', 'spending-comparison', 'planning-suggestions'];
     resources.forEach(resource => {
       const query = ['spending-history', 'spending-comparison'].includes(resource) ? `?period=${period.toLowerCase()}` : '';
-      api(`customers/${customer}/${resource}${query}`, { signal: controller.signal })
-        .then(result => setData(old => ({ ...old, [resource]: result })))
+      const endpoint = `${resource}${query}`;
+      api(`customers/${customer}/${endpoint}`, { signal: controller.signal })
+        .then(async result => {
+          if (controller.signal.aborted) return;
+          setData(old => ({ ...old, [resource]: result }));
+          if (resource !== 'budget') return;
+          const keys = ['confirmed_income_eur', 'upcoming_essential_bills_eur', 'everyday_spending_eur',
+            'voluntary_goal_contribution_eur'];
+          if (keys.some(key => result.assumptions[key] == null)) return;
+          const remainder = await api(`customers/${customer}/planning-remainder`, {
+            method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...Object.fromEntries(keys.map(key => [key, result.assumptions[key]])),
+              horizon_days: result.assumptions.horizon_days }),
+          });
+          if (!controller.signal.aborted) setData(old => ({ ...old, 'saved-income-remainder': remainder }));
+        })
         .catch(e => { if (e.name !== 'AbortError') setError(e.message); });
     });
     return () => controller.abort();
@@ -146,10 +161,10 @@ function App() {
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
                 stroke="#94662e" strokeDasharray="5 5" ifOverflow="extendDomain" />}
               {history.budget_target_eur != null && <ReferenceLine y={Number(history.budget_target_eur)}
-                stroke="#3653a0" strokeWidth={2} label={{ value: '🏆', position: 'insideTopRight', fontSize: 18 }} ifOverflow="extendDomain" />}
+                stroke="#4b83ce" strokeWidth={1.5} strokeDasharray="3 5" label={<PlanTargetLabel />} ifOverflow="extendDomain" />}
             </BarChart></ResponsiveContainer></div> : <p role="status">{error ? 'Spending unavailable.' : 'Loading spending…'}</p>}
           <p className="legend">– – {period} average: {money(history?.historical_average_eur)}</p>
-          <p>🏆 Plan target: {money(history?.budget_target_eur)}. Confirm a spending plan on Home to add the blue line.</p>
+          <p>Plan target: {money(history?.budget_target_eur)}. Confirm a spending plan on Home to add the blue line.</p>
           <p className="fine">The blue line compares planned bills and everyday costs with recorded spending. Monthly targets use a 30-day equivalent. It is not money already saved.</p>
           {points?.length > 0 && <><h3>Categories in the latest displayed period</h3>
           <p className="fine">{points?.at(-1)?.start} to {points?.at(-1)?.end}

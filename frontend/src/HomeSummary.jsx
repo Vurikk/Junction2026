@@ -1,3 +1,4 @@
+import PlanTargetLabel from './PlanTargetLabel.jsx';
 import React, { useState } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, ReferenceLine } from 'recharts';
 import { chartPeriods } from './chartPeriods';
@@ -17,7 +18,8 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
   const points = chartPeriods(history);
   const headlines = { below: 'Spending below your usual', above: 'Spending above your usual', equal: 'Spending matches your usual' };
   const headline = headlines[comparison?.status] || 'Let’s explore your spending';
-  const allowance = range === 'Today' ? budget?.daily_eur : budget?.weekly_eur;
+  const incomeLeft = data['saved-income-remainder'];
+  const allowance = range === 'Today' ? incomeLeft?.daily_eur : incomeLeft?.weekly_eur;
   return <>
     <div className="money-card">
     <section className="recorded-balance"><h1>Balance</h1>
@@ -37,9 +39,12 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
       <div className="allowance-toggle">{['Today', 'Week'].map(value =>
         <button key={value} aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}</div></div>
       <strong className="allowance-amount">{money(allowance)}</strong>
-      <p className="fine">Estimated {range === 'Today' ? 'per day' : 'per week'}</p>
+      <p className="fine">{range === 'Today' ? 'Daily' : 'Weekly'} share of income left after your confirmed plan</p>
+      <p className="fine">Salary minus bills, everyday spending and your chosen goal contribution.</p>
       <div className="allowance-track" aria-hidden="true" />
-      <p className="fine">Usage tracking unavailable</p>
+      <p className="fine" role="status">Spending {range === 'Today' ? 'today' : 'this week'}: data unavailable.</p>
+      <p className="fine">The bar cannot show usage without current transactions. This does not mean nothing was spent.</p>
+      {incomeLeft?.remaining_income_eur < 0 && <p role="alert">Your planned costs and goal contribution exceed your income.</p>}
       <button className="text-button" onClick={onPlan} disabled={!data.assumptions}>
         {allowance == null ? 'Complete your spending plan' : 'Review your spending plan'} ›</button>
       {budget?.shortfall_eur > 0 && <p role="alert">Bills and reserve shortfall: {money(budget.shortfall_eur)}</p>}
@@ -61,11 +66,11 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
           {comparison?.baseline?.period_count != null && `${comparison.baseline.period_count} earlier months.`}</p>
         <p>Some transactions may be missing. Transfers and refunds are not included.</p>
         <p>Past spending does not tell us how much you have saved towards your goals.</p>
-      <h3>Estimate details</h3>
-        <p>{budget?.status === 'estimated' ? `Based on your confirmed ${budget.assumptions.horizon_days}-day plan.`
-          : 'All six planning amounts need confirmation. Blank amounts remain unknown.'}</p>
-        <p>This estimate includes everyday spending. Purchases are not deducted as you make them.
-          Check when bills are due before spending. The bar does not track money used.</p>
+      <h3>About this amount</h3>
+        <p>Uses your last confirmed spending plan. Enter a goal contribution, including zero if appropriate,
+          and confirm the plan to update it.</p>
+        <p>This is planned income left, not a live bank balance. Existing savings and emergency reserves are excluded;
+          purchases are not deducted automatically. Check bill and salary dates before spending.</p>
     </details>
     </div>
     <section className="home-current-goals"><div className="section-title"><h2>Current goals</h2>
@@ -81,18 +86,18 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
         <p className="fine">{date(points[0].start)} – {date(points.at(-1).end)} · Recorded {history.period} periods</p>
         <div role="img" aria-label="Recorded spending bars with historical average and optional chart target">
           <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={points} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+            <BarChart data={points} margin={{ top: 14, right: 4, left: 28, bottom: 0 }}>
               <XAxis tickFormatter={date} dataKey="start" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={45} />
               <Tooltip labelFormatter={date} formatter={value => money(value)} />
               <Bar dataKey="spending_eur" name="Recorded spending" fill="#008c45" radius={[3, 3, 0, 0]} />
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
                 stroke="#94662e" strokeDasharray="4 4" ifOverflow="extendDomain" />}
               {history.budget_target_eur != null && <ReferenceLine y={Number(history.budget_target_eur)}
-                stroke="#3653a0" strokeWidth={2} label={{ value: '🏆', position: 'insideTopRight', fontSize: 18 }} ifOverflow="extendDomain" />}
+                stroke="#4b83ce" strokeWidth={1.5} strokeDasharray="3 5" label={<PlanTargetLabel />} ifOverflow="extendDomain" />}
             </BarChart>
           </ResponsiveContainer>
         </div><p className="fine">Dashed: historical average {money(history.historical_average_eur)}
-          {history.budget_target_eur != null && ` · 🏆 Plan target ${money(history.budget_target_eur)}`}</p>
+          {history.budget_target_eur != null && ` · Plan target ${money(history.budget_target_eur)}`}</p>
         {history.budget_target_eur != null && <p className="fine">Blue line: planned spending, shown per {history.period === 'week' ? '7' : '30'} days.</p>}
       </> : <p className="fine">Spending history unavailable.</p>}
       <button className="text-button" onClick={onSpending}>See where it went ›</button>
