@@ -199,6 +199,17 @@ def create_goal(request: Request, customer_id: str, payload: GoalInput):
     return goal
 
 
+@app.delete('/api/customers/{customer_id}/goals/{goal_id}')
+def delete_goal(request: Request, customer_id: str, goal_id: str):
+    customer_for(request, customer_id)
+    current = request.app.state.goals[customer_id]
+    for index, goal in enumerate(current):
+        if goal.id == goal_id:
+            current.pop(index)
+            return {'deleted_goal_id': goal_id}
+    raise HTTPException(404, 'Goal not found for this customer')
+
+
 @app.get("/api/customers/{customer_id}/goal-analysis", response_model=GoalAnalysis)
 def analyze_goals(request: Request, customer_id: str):
     customer_for(request, customer_id)

@@ -242,3 +242,5 @@ Copy-ready task prompt:
 - Coach now shows six-month hypothetical category saving lines and first-month goal allocation bars. Python owns savings projection; existing goal allocations reused. Ten tests and build passed; both charts visually verified.
 
 - Coach question search restored: local typing suggestions route only to supported deterministic actions. Microphone displays future-feature notice, never records. Build, matching checks and browser flow passed.
+
+- Goal removal added in Goals with Yes, remove / Keep goal confirmation. Customer-scoped DELETE API, automatic chart/allowance refresh; 11 relevant tests and production build passed.

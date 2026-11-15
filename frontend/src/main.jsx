@@ -1,3 +1,4 @@
+import RemoveGoalButton from './RemoveGoalButton';
 import SpendingTooltip from './SpendingTooltip';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -91,6 +92,14 @@ function App() {
       } catch {
         setGoalNotice('Goal saved. Its explanation is unavailable right now. You can analyze it later.');
       }
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
+  async function removeGoal(goal) {
+    setBusy(true); setError(''); setGoalNotice('');
+    try {
+      await api(`customers/${customer}/goals/${encodeURIComponent(goal.id)}`, { method: 'DELETE' });
+      setData({}); setReload(value => value + 1);
+      setGoalNotice(`${goal.name} removed. Your estimates will update automatically.`);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   async function savePlan(payload) {
@@ -191,7 +200,8 @@ function App() {
           {data.goals?.length === 0 && <div className="empty"><span>◎</span><h3>What are you looking forward to?</h3>
           <p>Add your first goal below.</p></div>}
           {data.goals?.map(goal => <article className="goal" key={goal.id}><span className={`tag ${goal.priority}`}>{goal.priority}</span>
-            <h3>{goal.name}</h3><strong>{money(goal.amount_eur)}</strong><p>Saved amount and progress not available</p></article>)}
+            <h3>{goal.name}</h3><strong>{money(goal.amount_eur)}</strong><p>Saved amount and progress not available</p>
+            <RemoveGoalButton goal={goal} busy={busy} onRemove={removeGoal} /></article>)}
           <button className="primary" onClick={() => openCoach('Analyze my goals')} disabled={busy || !data.goals?.length}>{busy ? 'Please wait…' : 'Analyze my goals'}</button>
           </section>
         <section><h2>A new goal</h2>
