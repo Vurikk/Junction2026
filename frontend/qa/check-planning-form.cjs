@@ -32,3 +32,15 @@ assert.match(html, /disabled="">Confirm and calculate/);
 assert.match(html, /historical draft/);
 assert.match(html, /Loading historical defaults/);
 console.log('Planning form checks passed: stale saved amounts ignored, goals blank, three-month slider, unknown balance and food caveat.');
+const saved = renderToStaticMarkup(React.createElement(component.exports.default, {
+  customer: 'fixture', hasSavedPlan: true,
+  assumptions: { horizon_days: 45, repeat_plan: true, confirmed_income_eur: '500.00', upcoming_essential_bills_eur: '1200.00',
+    emergency_reserve_eur: '700.00', voluntary_goal_contribution_eur: '25.00', weekly_budget_eur: '90.00', monthly_budget_eur: '360.00' },
+  api: () => { throw new Error('No network'); }, money: value => value == null ? 'Not available' : String(value),
+}));
+for (const value of ['500.00', '1200.00', '700.00', '25.00', '90.00', '360.00', '45']) {
+  assert.ok(saved.includes(`value="${value}"`), value);
+}
+assert.match(saved, /custom amount below/);
+assert.match(saved, /name="repeat_plan"[^>]*checked/);
+console.log('Confirmed-plan restoration checks passed: salary, bills, reserve, goal limit, targets, horizon and repeat.');

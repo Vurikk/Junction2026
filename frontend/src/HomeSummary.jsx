@@ -9,7 +9,7 @@ const date = value => {
     : new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(parsed);
 };
 
-export default function HomeSummary({ data, money, openCoach, onSpending, onPlan, onAddGoal }) {
+export default function HomeSummary({ data, money, openCoach, onSpending, onPlan, onAddGoal, onLastFiveWeeks }) {
   const [range, setRange] = useState('Today');
   const balances = data['recorded-balances'];
   const comparison = data['spending-comparison'];
@@ -82,6 +82,7 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
     </section>
     <section className="home-chart"><div className="section-title"><h2>Spending history</h2>
       <button className="text-button" onClick={onSpending}>View all ›</button></div>
+      <button className="text-button" aria-pressed={history?.period === 'week'} onClick={onLastFiveWeeks}>Last 5 weeks</button>
       {points?.length ? <>
         <p className="fine">{date(points[0].start)} – {date(points.at(-1).end)} · Recorded {history.period} periods</p>
         <div role="img" aria-label="Recorded spending bars with historical average and optional chart target">

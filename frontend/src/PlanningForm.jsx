@@ -15,18 +15,19 @@ const fields = [
   ['monthly_budget_eur', 'Monthly chart target (optional)', 'A chart reference, separate from this spending plan.'],
 ];
 
-export default function PlanningForm({ customer, assumptions, api, money, busy, onSave }) {
+export default function PlanningForm({ customer, assumptions, hasSavedPlan = false, api, money, busy, onSave }) {
   const [days, setDays] = useState(String(assumptions.horizon_days));
-  const [values, setValues] = useState(() => Object.fromEntries(fields.map(([key]) => [key, ''])));
+  const [values, setValues] = useState(() => Object.fromEntries(fields.map(([key]) =>
+    [key, hasSavedPlan ? assumptions[key] ?? '' : ''])));
   const [reserveMonths, setReserveMonths] = useState(3);
   const selectedMonths = useRef(3);
-  const [customReserve, setCustomReserve] = useState(false);
+  const [customReserve, setCustomReserve] = useState(hasSavedPlan && assumptions.emergency_reserve_eur != null);
   const [defaults, setDefaults] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [review, setReview] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const edited = useRef(new Set());
+  const edited = useRef(new Set(hasSavedPlan ? fields.filter(([key]) => assumptions[key] != null).map(([key]) => key) : []));
   const [remainder, setRemainder] = useState(null);
   const remainderBody = JSON.stringify(Object.fromEntries([
     'confirmed_income_eur', 'upcoming_essential_bills_eur', 'everyday_spending_eur', 'voluntary_goal_contribution_eur',
@@ -120,7 +121,10 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
   return <details className="planning" id="spending-plan"><summary>Optional spending plan</summary><section>
     <h2>Confirm your spending plan</h2>
     <p>These recorded amounts are a historical draft. Review what is available and what you expect for the whole plan before confirming.</p>
-    <form onSubmit={event => {
+    <form onInvalidCapture={event => {
+      const options = event.target.closest('details.advanced');
+      if (options) options.open = true;
+    }} onSubmit={event => {
       event.preventDefault();
       if (unavailable || !confirmed) return;
       const form = new FormData(event.currentTarget);

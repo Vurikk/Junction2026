@@ -38,6 +38,7 @@ function App() {
   const [coachQuestion, setCoachQuestion] = useState('');
   const [coachOpen, setCoachOpen] = useState(false);
   const [goalNotice, setGoalNotice] = useState('');
+  const [savedPlanCustomer, setSavedPlanCustomer] = useState(null);
   const [focusGoal, setFocusGoal] = useState(false);
   useEffect(() => { window.scrollTo(0, 0); }, [page]);
   useEffect(() => {
@@ -55,7 +56,7 @@ function App() {
     const controller = new AbortController();
     setData({}); setError(''); setAnalysis(null);
     const resources = ['spending', 'spending-history', 'budget', 'goals', 'assumptions', 'mortgages',
-      'recorded-balances', 'spending-comparison', 'planning-suggestions'];
+      'recorded-balances', 'spending-comparison', 'planning-suggestions', 'planning-state'];
     resources.forEach(resource => {
       const query = ['spending-history', 'spending-comparison'].includes(resource) ? `?period=${period.toLowerCase()}` : '';
       const endpoint = `${resource}${query}`;
@@ -109,6 +110,7 @@ function App() {
       await api(`customers/${customer}/assumptions`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       });
+      setSavedPlanCustomer(customer);
       setData({}); setAnalysis(null); setGoalNotice(''); setReload(value => value + 1);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
@@ -133,12 +135,15 @@ function App() {
       {!customer && !error && <p role="status">Loading your profiles…</p>}
       {page === 'Home' && <>
         <HomeSummary key={customer} data={data} money={money} openCoach={openCoach} onSpending={() => setPage('Spending')}
+          onLastFiveWeeks={() => { if (period !== 'Week') { setData({}); setPeriod('Week'); } }}
           onAddGoal={() => { setPage('Goals'); setFocusGoal(true); }}
           onPlan={() => {
             const plan = document.getElementById('spending-plan');
             if (plan) { plan.open = true; plan.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
           }} />
-        {data.assumptions && <PlanningForm key={`${customer}-${reload}`} assumptions={data.assumptions} customer={customer} api={api} money={money}
+        {savedPlanCustomer === customer && <p role="status">Spending plan saved. Your confirmed amounts and extra options will be restored.</p>}
+        {data.assumptions && data['planning-state'] && <PlanningForm key={`${customer}-${reload}`}
+          assumptions={data.assumptions} customer={customer} api={api} money={money} hasSavedPlan={data['planning-state'].has_saved_plan}
           suggestions={data['planning-suggestions']} busy={busy} onSave={savePlan} />}
         <details className="supporting"><summary>Account and mortgage information</summary><section>
           <p>Recorded balances are historical snapshots, not current available funds.</p><h2>Mortgage information</h2>
@@ -151,7 +156,11 @@ function App() {
           <span><b>What am I spending on?</b><small>Ask the rule-based Coach</small></span><span>&rsaquo;</span></button>
         <section><div className="section-title"><h2>Spending history</h2><span className="tag">Recorded</span></div>
           <div className="segmented">{['Week', 'Month'].map(value => <button key={value} aria-pressed={period === value}
-            disabled={busy} onClick={() => { if (value !== period) { setData({}); setPeriod(value); } }}>{value}</button>)}</div>
+            disabled={busy} onClick={() => { if (value !== period) { setData({}); setPeriod(value); } }}>
+            {value === 'Week' ? 'Last 5 weeks' : value}</button>)}</div>
+          {history?.period === 'week' && chartPeriods(history)?.length > 0 && <p className="fine">
+            Recorded weeks: {chartPeriods(history)[0].start} – {chartPeriods(history).at(-1).end}. These are historical records.
+          </p>}
           {history ? <div className="chart" role="img" aria-label={`${period} spending with historical average and confirmed chart target`}>
             <ResponsiveContainer width="100%" height={230}><BarChart data={chartPeriods(history)}
               margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
