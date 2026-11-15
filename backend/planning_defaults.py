@@ -75,3 +75,18 @@ def planning_defaults(customer, horizon_days=30):
         'note': ('Suggested starting amounts only. Past records may be incomplete and do not confirm future income or bills. '
                  'Review and confirm before using them for goal or spending estimates.'),
     }
+
+
+def income_remainder(confirmed_income_eur=None, upcoming_essential_bills_eur=None,
+                     everyday_spending_eur=None, voluntary_goal_contribution_eur=None):
+    required = (confirmed_income_eur, upcoming_essential_bills_eur, everyday_spending_eur)
+    included = voluntary_goal_contribution_eur is not None
+    remaining = None
+    if all(value is not None for value in required):
+        remaining = (money(confirmed_income_eur) - money(upcoming_essential_bills_eur)
+                     - money(everyday_spending_eur) - money(voluntary_goal_contribution_eur or 0))
+    return {'remaining_income_eur': float(remaining) if remaining is not None else None,
+            'goal_contribution_included': included,
+            'note': ('After your entered goal contribution. ' if included else 'Before choosing a goal contribution. ')
+                    + 'Income only: your existing balance and protected emergency money are not included. '
+                    'This is not a safe-to-spend estimate. A negative amount means these planned outgoings exceed this income.'}

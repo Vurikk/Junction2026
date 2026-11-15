@@ -5,7 +5,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from backend.main import app
-from backend.planning_defaults import planning_defaults
+from backend.planning_defaults import planning_defaults, income_remainder
 from backend.test_data_coach import fixture
 
 
@@ -23,6 +23,15 @@ def sample():
 
 
 class PlanningDefaultsTests(unittest.TestCase):
+    def test_income_remainder_missing_zero_and_excess_goals(self):
+        self.assertIsNone(income_remainder()['remaining_income_eur'])
+        before = income_remainder(3000, 1400, 400)
+        self.assertEqual(before['remaining_income_eur'], 1200)
+        self.assertFalse(before['goal_contribution_included'])
+        self.assertEqual(income_remainder(3000, 1400, 400, 200)['remaining_income_eur'], 1000)
+        self.assertEqual(income_remainder(3000, 1400, 400, 1500)['remaining_income_eur'], -300)
+        self.assertTrue(income_remainder(0, 0, 0, 0)['goal_contribution_included'])
+
     def test_amounts_horizon_scaling_and_no_food_double_count(self):
         for horizon, salary, bills in [(30, 3000, 1300), (15, 1500, 650), (60, 6000, 2600)]:
             result = planning_defaults(sample(), horizon)
@@ -66,6 +75,11 @@ class PlanningDefaultsTests(unittest.TestCase):
             with TestClient(app) as client:
                 base = '/api/customers/CUST04457/'
                 before = {key: client.get(base + key).json() for key in ['assumptions', 'goals', 'budget']}
+                remainder = client.post(base + 'planning-remainder', json={
+                    'confirmed_income_eur': '3000', 'upcoming_essential_bills_eur': '1400',
+                    'everyday_spending_eur': '400', 'voluntary_goal_contribution_eur': '200'})
+                self.assertEqual(remainder.json()['remaining_income_eur'], 1000)
+                self.assertEqual(client.post(base + 'planning-remainder', json={'confirmed_income_eur': '-1'}).status_code, 422)
                 result = client.get(base + 'planning-defaults').json()
                 self.assertEqual(result['balance']['amount_eur'], 1650)
                 for horizon in ['0', '367', '1.5']:

@@ -254,6 +254,20 @@ def compare_spending(request: Request, customer_id: str, period: Literal["week",
     return spending_comparison(customer_for(request, customer_id), period)
 
 
+class IncomeRemainderInput(Model):
+    confirmed_income_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+    upcoming_essential_bills_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+    everyday_spending_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+    voluntary_goal_contribution_eur: Decimal | None = Field(None, ge=0, max_digits=12, decimal_places=2)
+
+
+@app.post("/api/customers/{customer_id}/planning-remainder")
+def remaining_income(request: Request, customer_id: str, payload: IncomeRemainderInput):
+    customer_for(request, customer_id)
+    from .planning_defaults import income_remainder
+    return income_remainder(**payload.model_dump())
+
+
 @app.get("/api/customers/{customer_id}/planning-defaults")
 def suggested_plan_defaults(request: Request, customer_id: str, horizon_days: int = Query(30, ge=1, le=366)):
     from .planning_defaults import planning_defaults
