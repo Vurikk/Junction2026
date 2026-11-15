@@ -146,11 +146,11 @@ function App() {
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
                 stroke="#94662e" strokeDasharray="5 5" ifOverflow="extendDomain" />}
               {history.budget_target_eur != null && <ReferenceLine y={Number(history.budget_target_eur)}
-                stroke="#3653a0" strokeDasharray="3 3" ifOverflow="extendDomain" />}
+                stroke="#3653a0" strokeWidth={2} label={{ value: '🏆', position: 'insideTopRight', fontSize: 18 }} ifOverflow="extendDomain" />}
             </BarChart></ResponsiveContainer></div> : <p role="status">{error ? 'Spending unavailable.' : 'Loading spending…'}</p>}
           <p className="legend">– – {period} average: {money(history?.historical_average_eur)}</p>
-          <p>Chart target: {money(history?.budget_target_eur)}. Set targets in Home's optional spending plan.</p>
-          <p className="fine">Chart targets are separate from safe spending allowances. Edge periods may be partial.</p>
+          <p>🏆 Plan target: {money(history?.budget_target_eur)}. Confirm a spending plan on Home to add the blue line.</p>
+          <p className="fine">The blue line compares planned bills and everyday costs with recorded spending. Monthly targets use a 30-day equivalent. It is not money already saved.</p>
           {points?.length > 0 && <><h3>Categories in the latest displayed period</h3>
           <p className="fine">{points?.at(-1)?.start} to {points?.at(-1)?.end}
             {points?.at(-1)?.partial ? ' / Partial period' : ''}</p>

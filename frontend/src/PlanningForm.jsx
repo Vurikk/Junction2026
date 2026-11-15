@@ -107,15 +107,13 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
         onWheel={event => event.currentTarget.blur()} value={values[key]} placeholder="Unknown"
         onChange={event => edit(key, event.target.value)} /><span aria-hidden="true">€</span></div>
       {key === 'voluntary_goal_contribution_eur' && <div className="fine" aria-live="polite">
-        <p>Income {money(values.confirmed_income_eur === '' ? null : values.confirmed_income_eur)}
-          {' − bills '}{money(values.upcoming_essential_bills_eur === '' ? null : values.upcoming_essential_bills_eur)}
-          {' − other daily costs '}{money(values.everyday_spending_eur === '' ? null : values.everyday_spending_eur)}
-          {' − goal contribution '}{values.voluntary_goal_contribution_eur === '' ? 'not chosen' : money(values.voluntary_goal_contribution_eur)}</p>
-        <p>Income left for other savings or to leave unallocated: <b>{money(currentRemainder?.result?.remaining_income_eur)}</b></p>
+        <p>Your income − planned expenses = <b>{money(currentRemainder?.result?.remaining_income_eur)}</b> left.</p>
+        <p>Includes bills, everyday spending and any goal contribution you enter.</p>
         {!currentRemainder && <p>Updating preview…</p>}
         {currentRemainder?.error && <p>Remainder preview is unavailable. Review the entered amounts.</p>}
-        {currentRemainder?.result && <p>{currentRemainder.result.note}</p>}
-        <p>This excludes your existing balance and protected reserve. It is not a safe-to-spend amount.</p>
+        <details><summary>What this includes</summary>
+          <p>{currentRemainder?.result?.note}</p>
+        </details>
       </div>}
     </React.Fragment>;
   }

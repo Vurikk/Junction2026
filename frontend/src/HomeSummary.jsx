@@ -88,11 +88,12 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
                 stroke="#94662e" strokeDasharray="4 4" ifOverflow="extendDomain" />}
               {history.budget_target_eur != null && <ReferenceLine y={Number(history.budget_target_eur)}
-                stroke="#3653a0" strokeDasharray="3 3" ifOverflow="extendDomain" />}
+                stroke="#3653a0" strokeWidth={2} label={{ value: '🏆', position: 'insideTopRight', fontSize: 18 }} ifOverflow="extendDomain" />}
             </BarChart>
           </ResponsiveContainer>
         </div><p className="fine">Dashed: historical average {money(history.historical_average_eur)}
-          {history.budget_target_eur != null && ` · Target ${money(history.budget_target_eur)}`}</p>
+          {history.budget_target_eur != null && ` · 🏆 Plan target ${money(history.budget_target_eur)}`}</p>
+        {history.budget_target_eur != null && <p className="fine">Blue line: planned spending, shown per {history.period === 'week' ? '7' : '30'} days.</p>}
       </> : <p className="fine">Spending history unavailable.</p>}
       <button className="text-button" onClick={onSpending}>See where it went ›</button>
     </section>
