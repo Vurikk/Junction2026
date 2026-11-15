@@ -186,6 +186,13 @@ def create_goal(request: Request, customer_id: str, payload: GoalInput):
     return goal
 
 
+@app.get("/api/customers/{customer_id}/goal-contributions")
+def goal_contributions(request: Request, customer_id: str):
+    customer_for(request, customer_id)
+    from .goal_contributions import contribution_demo
+    return contribution_demo(request.app.state.goals[customer_id])
+
+
 @app.get("/api/customers/{customer_id}/goal-analysis", response_model=GoalAnalysis)
 def analyze_goals(request: Request, customer_id: str):
     customer_for(request, customer_id)
