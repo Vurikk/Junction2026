@@ -42,8 +42,7 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
       <p className="fine">{range === 'Today' ? 'Daily' : 'Weekly'} share of income left after your confirmed plan</p>
       <p className="fine">Salary minus bills, everyday spending and your chosen goal contribution.</p>
       <div className="allowance-track" aria-hidden="true" />
-      <p className="fine" role="status">Spending {range === 'Today' ? 'today' : 'this week'}: data unavailable.</p>
-      <p className="fine">The bar cannot show usage without current transactions. This does not mean nothing was spent.</p>
+      <p className="fine" role="status">Purchases {range === 'Today' ? 'today' : 'this week'}: <span aria-label="Not yet known">—</span></p>
       {incomeLeft?.remaining_income_eur < 0 && <p role="alert">Your planned costs and goal contribution exceed your income.</p>}
       <button className="text-button" onClick={onPlan} disabled={!data.assumptions}>
         {allowance == null ? 'Complete your spending plan' : 'Review your spending plan'} ›</button>
@@ -67,6 +66,7 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
         <p>Some transactions may be missing. Transfers and refunds are not included.</p>
         <p>Past spending does not tell us how much you have saved towards your goals.</p>
       <h3>About this amount</h3>
+        <p>Current purchases are not available in these records. The dash and neutral bar do not mean zero spending.</p>
         <p>Uses your last confirmed spending plan. Enter a goal contribution, including zero if appropriate,
           and confirm the plan to update it.</p>
         <p>This is planned income left, not a live bank balance. Existing savings and emergency reserves are excluded;
