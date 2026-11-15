@@ -320,3 +320,12 @@ footer { color: #606b63; }
   background: #f0f7f2; color: #15482e; }
 .coach-search-results p { font-size: 12px; margin: 4px 0; }
 .coach-question-search > p { margin: 6px 0 0; }
+
+.mortgage-card { border: 1px solid #d6e5da; border-radius: 12px; padding: 14px; margin: 12px 0; background: #f7fbf8; }
+.mortgage-card .section-title { flex-wrap: wrap; gap: 8px; }
+.mortgage-card h3 { margin: 0; font-size: 16px; }
+.mortgage-status { font-weight: 600; color: #24543d; }
+.mortgage-card dl { margin: 12px 0 0; }
+.mortgage-card dl > div { display: flex; justify-content: space-between; gap: 14px; margin-top: 10px; }
+.mortgage-card dt { color: #526257; }
+.mortgage-card dd { margin: 0; font-weight: 600; text-align: right; }

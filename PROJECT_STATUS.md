@@ -244,3 +244,5 @@ Copy-ready task prompt:
 - Coach question search restored: local typing suggestions route only to supported deterministic actions. Microphone displays future-feature notice, never records. Build, matching checks and browser flow passed.
 
 - Goal removal added in Goals with Yes, remove / Keep goal confirmation. Customer-scoped DELETE API, automatic chart/allowance refresh; 11 relevant tests and production build passed.
+
+- Added compact mortgage application cards under Home account/mortgage details: decision, requested amount and unknown repayment label. No active-loan inference; linked/unlinked/declined rendering checks and build passed.

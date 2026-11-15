@@ -1,3 +1,4 @@
+import MortgageSummary from './MortgageSummary';
 import RemoveGoalButton from './RemoveGoalButton';
 import SpendingTooltip from './SpendingTooltip';
 import React, { useEffect, useRef, useState } from 'react';
@@ -142,11 +143,9 @@ function App() {
         {data.assumptions && data['planning-state'] && <PlanningForm key={`${customer}-${reload}`}
           assumptions={data.assumptions} customer={customer} api={api} money={money}
           hasSavedPlan={data['planning-state'].has_saved_plan} busy={busy} onSave={savePlan} />}
-        <details className="supporting"><summary>Account and mortgage information</summary><section>
-          <p>Recorded balances are historical snapshots, not current available funds.</p><h2>Mortgage information</h2>
-          <p>{data.mortgages ? (data.mortgages.applications.length
-            ? 'Linked mortgage application data available.' : 'No linked mortgage application.') : 'Loading mortgage information…'}</p>
-          <p>{data.mortgages?.note}</p></section></details>
+        <details className="supporting"><summary>Account and mortgage information</summary>
+          <MortgageSummary data={data.mortgages} money={money} />
+        </details>
       </>}
       {page === 'Spending' && <>
         <button className="journey-link" onClick={() => openCoach('Spending by category')}><Icon name="Coach" />
