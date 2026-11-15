@@ -2,6 +2,7 @@ import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { chartPeriods } from './chartPeriods';
 import SafeToSpend from './SafeToSpend';
+import SpendingTooltip from './SpendingTooltip';
 
 const date = value => value ? value.slice(0, 10) : 'Date unavailable';
 
@@ -57,7 +58,8 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
       <button className="text-button" onClick={onAddGoal}>Add goal</button></div>
       {!data.goals ? <p>Goals unavailable.</p> : data.goals.length === 0 ? <p>No goals yet.</p>
         : data.goals.map(goal => <div className="row" key={goal.id}>
-          <span>{goal.name}<small className="fine">{goal.priority}</small></span><b>{money(goal.amount_eur)}</b>
+          <span>{goal.name}<small className="fine">{goal.priority === 'critical' ? 'Urgent' : goal.priority}</small></span>
+          <b>{money(goal.amount_eur)}</b>
         </div>)}
     </section>
     <section className="home-chart"><div className="section-title"><h2>Spending history</h2>
@@ -69,7 +71,7 @@ export default function HomeSummary({ data, money, openCoach, onSpending, onPlan
             <BarChart data={points} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
               <XAxis dataKey="start" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={45} />
               <YAxis hide padding={{ top: 18, bottom: 8 }} />
-              <Tooltip formatter={value => money(value)} />
+              <Tooltip content={<SpendingTooltip period={history.period} income={data.income} money={money} />} />
               <Bar dataKey="spending_eur" name="Recorded spending" fill="#008c45" radius={[3, 3, 0, 0]} />
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
                 stroke="#94662e" strokeDasharray="4 4" ifOverflow="extendDomain"

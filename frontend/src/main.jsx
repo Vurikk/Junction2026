@@ -7,6 +7,7 @@ import CoachDialog from './CoachDialog';
 import Icon from './Icon';
 import HomeSummary, { ChartTargetContext, PlanningContext } from './HomeSummary';
 import { chartPeriods } from './chartPeriods';
+import SpendingTooltip from './SpendingTooltip';
 
 const money = value => value == null ? 'Not available' : new Intl.NumberFormat('en-FI', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 2,
@@ -109,11 +110,11 @@ function App() {
     const controller = new AbortController();
     setData({}); setError(''); setAnalysis(null);
     const resources = ['spending', 'spending-history', 'budget', 'goals', 'assumptions', 'mortgages',
-      'recorded-balances', 'spending-comparison', 'planning-suggestions'];
+      'recorded-balances', 'spending-comparison', 'planning-suggestions', 'income'];
     resources.forEach(resource => {
       const query = ['spending-history', 'spending-comparison'].includes(resource) ? `?period=${period.toLowerCase()}` : '';
       api(`customers/${customer}/${resource}${query}`, { signal: controller.signal })
-        .then(result => setData(old => ({ ...old, [resource]: result })))
+        .then(result => { if (!controller.signal.aborted) setData(old => ({ ...old, [resource]: result })); })
         .catch(e => { if (e.name !== 'AbortError') setError(e.message); });
     });
     return () => controller.abort();
@@ -201,7 +202,8 @@ function App() {
             <ResponsiveContainer width="100%" height={230}><BarChart data={chartPeriods(history)}
               margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
               <XAxis dataKey="start" tickLine={false} axisLine={false} />
-              <YAxis tickLine={false} axisLine={false} padding={{ top: 18, bottom: 8 }} /><Tooltip formatter={value => money(value)} />
+              <YAxis tickLine={false} axisLine={false} padding={{ top: 18, bottom: 8 }} />
+              <Tooltip content={<SpendingTooltip period={history.period} income={data.income} money={money} />} />
               <Bar dataKey="spending_eur" name="Spent" fill="#008c45" radius={[5, 5, 0, 0]} />
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
                 stroke="#94662e" strokeDasharray="5 5" ifOverflow="extendDomain"
@@ -241,7 +243,8 @@ function App() {
           {!data.goals && <p role="status">{error ? 'Goals unavailable.' : 'Loading goals…'}</p>}
           {data.goals?.length === 0 && <div className="empty"><span>◎</span><h3>What are you looking forward to?</h3>
           <p>Add your first goal below.</p></div>}
-          {data.goals?.map(goal => <article className="goal" key={goal.id}><span className={`tag ${goal.priority}`}>{goal.priority}</span>
+          {data.goals?.map(goal => <article className="goal" key={goal.id}><span className={`tag ${goal.priority}`}>
+            {goal.priority === 'critical' ? 'Urgent' : goal.priority}</span>
             <h3>{goal.name}</h3><strong>{money(goal.amount_eur)}</strong><p>Saved amount and progress not available</p></article>)}
           <button className="primary" onClick={analyze} disabled={busy || !data.goals?.length}>{busy ? 'Please wait…' : 'Analyze my goals'}</button>
           {analysis && <div className="analysis" role="status"><h3>Can I reach my goals?</h3>
@@ -261,9 +264,9 @@ function App() {
           <label htmlFor="amount">Target amount (€)</label><input id="amount" name="amount" type="number" inputMode="decimal"
             min="0.01" max="9999999999.99" step="0.01" placeholder="0.00" required />
           <label htmlFor="priority">How important is it?</label><select id="priority" name="priority" defaultValue="flexible">
-            <option value="critical">Critical — must come first</option><option value="important">Important — comes next</option>
+            <option value="critical">Urgent</option><option value="important">Important</option>
             <option value="flexible">Flexible — can wait</option></select>
-          <p className="fine">Critical, then important, then flexible. Goals reset when the demo server restarts.</p>
+          <p className="fine">Urgent, then important, then flexible. Goals reset when the demo server restarts.</p>
           <button className="primary" disabled={busy || !customer || !data.goals}>{busy ? 'Please wait…' : 'Create goal'}</button>
         </form></section>
       </>}

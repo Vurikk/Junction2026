@@ -294,3 +294,6 @@ footer { color: #606b63; }
 @media (prefers-reduced-motion: reduce) { .coach-dialog { transition: none; } .coach-dialog[open] { animation: none; } }
 .coach-dialog { bottom: max(72px, calc(100dvh - var(--coach-height, 100dvh) - var(--coach-top, 0px) + 72px)); }
 @media (max-height: 500px) { .coach-dialog { bottom: 0; } }
+.spending-tooltip { background: white; border: 1px solid #d6ddd8; border-radius: 10px; padding: 10px 12px;
+  box-shadow: 0 3px 12px #00000012; max-width: min(300px, calc(100vw - 32px)); }
+.spending-tooltip p { margin: 3px 0; }
