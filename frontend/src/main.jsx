@@ -1,4 +1,5 @@
 import PlanTargetLabel from './PlanTargetLabel.jsx';
+import GoalContributions from './GoalContributions.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
@@ -193,6 +194,7 @@ function App() {
           <p className="fine">{history?.note} Basket classifications are uncertain; everyday categories can contain essentials.</p></section>
       </>}
       {page === 'Goals' && <>
+        <GoalContributions key={customer} customer={customer} api={api} money={money} goals={data.goals} />
         {goalNotice && <section role="status">{goalNotice}</section>}
         <section><div className="section-title"><h2>Your goals</h2><span className="tag">One step at a time</span></div>
           {!data.goals && <p role="status">{error ? 'Goals unavailable.' : 'Loading goals…'}</p>}
