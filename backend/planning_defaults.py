@@ -90,3 +90,14 @@ def income_remainder(confirmed_income_eur=None, upcoming_essential_bills_eur=Non
             'note': ('After your entered goal contribution. ' if included else 'Before choosing a goal contribution. ')
                     + 'Income only: your existing balance and protected emergency money are not included. '
                     'This is not a safe-to-spend estimate. A negative amount means these planned outgoings exceed this income.'}
+
+
+def spending_plan_target(assumptions, period):
+    explicit = assumptions.get('weekly_budget_eur' if period == 'week' else 'monthly_budget_eur')
+    if explicit is not None:
+        return float(money(explicit))
+    bills, everyday = assumptions.get('upcoming_essential_bills_eur'), assumptions.get('everyday_spending_eur')
+    if bills is None or everyday is None:
+        return None
+    days = assumptions['horizon_days']
+    return float(money((money(bills) + money(everyday)) * (7 if period == 'week' else 30) / days))

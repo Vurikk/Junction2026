@@ -235,8 +235,9 @@ def set_assumptions(request: Request, customer_id: str, payload: Assumptions):
 @app.get("/api/customers/{customer_id}/spending-history")
 def spending_history(request: Request, customer_id: str, period: Literal["week", "month"] = "month"):
     customer = customer_for(request, customer_id)
-    key = "weekly_budget_eur" if period == "week" else "monthly_budget_eur"
-    return history(customer, period, request.app.state.assumptions[customer_id][key])
+    from .planning_defaults import spending_plan_target
+    target = spending_plan_target(request.app.state.assumptions[customer_id], period)
+    return history(customer, period, target)
 
 
 @app.get("/api/customers/{customer_id}/income")

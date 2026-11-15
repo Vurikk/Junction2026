@@ -5,7 +5,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from backend.main import app
-from backend.planning_defaults import planning_defaults, income_remainder
+from backend.planning_defaults import planning_defaults, income_remainder, spending_plan_target
 from backend.test_data_coach import fixture
 
 
@@ -23,6 +23,14 @@ def sample():
 
 
 class PlanningDefaultsTests(unittest.TestCase):
+    def test_spending_target_uses_saved_costs_not_reserve_or_goal_transfers(self):
+        values = dict(horizon_days=60, upcoming_essential_bills_eur=2000, everyday_spending_eur=400,
+                      emergency_reserve_eur=9000, voluntary_goal_contribution_eur=500)
+        self.assertEqual(spending_plan_target(values, 'month'), 1200)
+        self.assertEqual(spending_plan_target(values, 'week'), 280)
+        self.assertIsNone(spending_plan_target({}, 'month'))
+        self.assertEqual(spending_plan_target({**values, 'monthly_budget_eur': 0}, 'month'), 0)
+
     def test_income_remainder_missing_zero_and_excess_goals(self):
         self.assertIsNone(income_remainder()['remaining_income_eur'])
         before = income_remainder(3000, 1400, 400)
