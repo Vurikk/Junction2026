@@ -2,6 +2,11 @@
 
 ## Scripted Coach (no LLM)
 
+Goal demo extension: GET `/api/customers/{id}/goal-plan` returns monthly saving capacity, current spending headroom
+and conditional priority-rollover timelines. POST `/api/customers/{id}/goal-plan/preview` accepts existing GoalInput,
+returns before/after plans and signed spending_change, and does not save the goal. Full fields and assumptions:
+`GOAL_PLAN_HANDOFF.md`. Guided action IDs also accept `monthly_savings` and `goal_timing`.
+
 POST `/api/customers/{id}/guided-coach` accepts action: overview, savings, goals, comparison, allowance or tips.
 Optional percent is10 or20 (default10), month is YYYY-MM, category is restaurants, entertainment or travel.
 Returns mode=guided, text, source_period, rows, note and follow-up actions. All financial math runs in Python.

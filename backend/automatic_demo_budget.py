@@ -6,7 +6,7 @@ from .data_coach import INCOME_TYPES, complete_windows, in_window, total_amount
 from .financial import PAYMENTS, PRIORITIES, money, spending_rows
 
 
-def automatic_budget(customer, goals, as_of=None):
+def automatic_budget(customer, goals, as_of=None, *, require_goal=True):
     checked = as_of or date.today()
     windows = complete_windows(customer, "month", checked)[-3:]
     rows = customer.get_transactions()
@@ -28,8 +28,8 @@ def automatic_budget(customer, goals, as_of=None):
     covered_days = sum((w.end_time.date() - w.start_time.date()).days + 1 for w in windows)
     result = {
         "customer_id": customer.customer_id, "currency": "EUR", "label": "Extra spending estimate",
-        "status": "needs_goal" if not goals else "insufficient_data" if missing else "estimated",
-        "action": "create_goal" if not goals else None, "mode": "historical_demo", "as_of": str(checked),
+        "status": "needs_goal" if not goals and require_goal else "insufficient_data" if missing else "estimated",
+        "action": "create_goal" if not goals and require_goal else None, "mode": "historical_demo", "as_of": str(checked),
         "source_period": {"start": str(windows[0].start_time.date()), "end": str(windows[-1].end_time.date())} if windows else None,
         "period_count": len(windows), "covered_days": covered_days, "confidence": "low",
         "daily_eur": None, "weekly_eur": None, "monthly_extra_eur": None, "income_eur": None,
@@ -48,7 +48,7 @@ def automatic_budget(customer, goals, as_of=None):
             "Goals are treated as remaining targets with no known prior progress. Nothing is saved or automatically modified.",
         ],
     }
-    if not goals or missing:
+    if (not goals and require_goal) or missing:
         return result
     income = money(sum((total_amount(in_window(earnings, w), 1) for w in windows), Decimal(0)) / 3)
     baseline = money(sum((total_amount(in_window(spending, w)) for w in windows), Decimal(0)) / 3)

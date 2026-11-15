@@ -21,7 +21,7 @@ class Model(BaseModel):
 
 
 class GuidedQuestion(Model):
-    action: Literal['overview', 'savings', 'goals', 'comparison', 'allowance', 'tips']
+    action: Literal['overview', 'savings', 'goals', 'comparison', 'allowance', 'tips', 'monthly_savings', 'goal_timing']
     percent: Literal[10, 20] = 10
     month: str | None = Field(None, pattern=r'^\d{4}-(0[1-9]|1[0-2])$')
     category: Literal['restaurants', 'entertainment', 'travel'] | None = None
@@ -373,3 +373,17 @@ def calculate_spending_estimate(request: Request, customer_id: str, payload: Spe
 def automatic_demo_budget(request: Request, customer_id: str):
     from .automatic_demo_budget import automatic_budget
     return automatic_budget(customer_for(request, customer_id), request.app.state.goals[customer_id])
+
+
+@app.get('/api/customers/{customer_id}/goal-plan')
+def read_goal_plan(request: Request, customer_id: str):
+    from .goal_plan import goal_plan
+    return goal_plan(customer_for(request, customer_id), request.app.state.goals[customer_id])
+
+
+@app.post('/api/customers/{customer_id}/goal-plan/preview')
+def preview_goal_plan(request: Request, customer_id: str, payload: GoalInput):
+    from .goal_plan import preview_goal
+    customer = customer_for(request, customer_id)
+    proposed = Goal(**payload.model_dump(), id='preview-goal', customer_id=customer_id)
+    return preview_goal(customer, request.app.state.goals[customer_id], proposed)

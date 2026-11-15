@@ -1,8 +1,7 @@
 """Curated chat answers: deterministic Python only, no provider or financial writes."""
-from math import ceil
 from decimal import Decimal
 
-from .automatic_demo_budget import automatic_budget
+from .goal_plan import goal_plan
 from .data_coach import complete_windows, in_window, period_dates, spending_comparison, total_amount
 from .financial import money, spending_rows
 from .savings_demo import savings_opportunities
@@ -17,10 +16,10 @@ def answer(customer, goals, action, percent=10, month=None, category=None):
                           'Pause before nonessential online purchases; revisit your wish list the next day.',
                           'Review restaurants, entertainment or travel only where a cut is realistic. Protect necessities.']
         return result
-    if action in {'goals', 'allowance'}:
-        budget = automatic_budget(customer, goals)
+    if action in {'goals', 'goal_timing', 'allowance', 'monthly_savings'}:
+        budget = goal_plan(customer, goals)
         result['source_period'] = budget['source_period']
-        if not goals:
+        if not goals and action != 'monthly_savings':
             result['text'] = 'Create a goal first: give it a name, amount and priority. Then I can explain the plan here.'
             result['note'] = 'Use Add goal on Home or the Goals tab. This chat does not save or change goals.'
             return result
@@ -30,27 +29,44 @@ def answer(customer, goals, action, percent=10, month=None, category=None):
             return result
         result['note'] = ('Historical scenario, not current cash or guaranteed savings. App assumptions: protect usual spending; '
                           'reserve up to 10% of income, then allocate 50% of the remaining surplus to goals. '
-                          'Actual saved progress is unknown. No goals are changed.')
+                          'Actual saved progress is unknown. Completed goals release their allocation to the next priority. '
+                          'Timings assume the historical saving capacity repeats. No goals are changed.')
+        if action == 'monthly_savings':
+            result['text'] = ('Here is the monthly saving room in your recorded pattern. Extra spending is already part of '
+                              'this amount, not additional income.')
+            result['rows'] = [
+                {'label': 'Income per typical month', 'value': budget['income_eur']},
+                {'label': 'Usual spending protected', 'value': budget['protected_spending_eur']},
+                {'label': 'Left after usual spending', 'value': budget['surplus_eur']},
+                {'label': 'Reserve-building contribution', 'value': budget['reserve_contribution_eur']},
+                {'label': 'Available after reserve', 'value': budget['monthly_savings_capacity_eur']},
+                {'label': 'Currently allocated to goals', 'value': budget['goal_allocated_eur']},
+                {'label': 'Extra spending you could choose to save instead', 'value': budget['monthly_extra_eur']},
+            ]
+            result['actions'] = [{'label': 'When could I reach my goals?', 'action': 'goal_timing'}]
+            return result
         if action == 'allowance':
             result['text'] = 'Here is the extra room above your usual spending after the demo reserve and goal allocations.'
             result['rows'] = [{'label': 'Extra per day', 'value': budget['daily_eur']},
                               {'label': 'Extra per week', 'value': budget['weekly_eur']},
                               {'label': 'Planned goal savings per typical month', 'value': budget['goal_allocated_eur']}]
             return result
-        result['text'] = 'Critical goals come first, followed by important and flexible goals.'
+        result['text'] = 'Urgent goals come first, followed by priority and flexible goals.'
         if budget['goal_allocated_eur'] == 0:
             result['text'] += ' This recorded pattern leaves no room for goal savings after protected costs and the reserve policy.'
-        lookup = {g.id: g for g in goals}
-        for item in budget['goal_allocations']:
-            goal = lookup[item['goal_id']]
-            allocated = money(item['allocated_eur'])
-            months = ceil(money(goal.amount_eur) / allocated) if allocated else None
+        for item in budget['goals']:
+            allocated = item['monthly_allocation_eur']
+            months = item['completion_months']
             unit = 'month' if months == 1 else 'months'
-            detail = (f'About {months} {unit} only if this monthly allocation continues; starting from no known saved amount.'
+            detail = (f'About {months} {unit} only if the saving budget continues ({item["completion_weeks"]} weeks). '
+                      'Earlier-priority goals are funded first; no existing savings assumed.'
                       if months else 'No allocation in this scenario; completion time is unknown.')
-            result['rows'].append({'label': f'{goal.name} · {goal.priority}', 'value': float(allocated),
-                                   'detail': f'EUR {money(goal.amount_eur):.2f} target. {detail}'})
-        result['text'] += ' Amounts below are planned savings per typical month, not money already saved.'
+            if item['save_all_extra_months'] is not None:
+                detail += (f' Saving all extra headroom instead: {item["save_all_extra_months"]} months '
+                           f'({item["save_all_extra_weeks"]} weeks), if the same cash flow repeats.')
+            result['rows'].append({'label': f'{item["name"]} · {item["priority_label"]}', 'value': allocated,
+                                   'detail': f'EUR {money(item["target_eur"]):.2f} target. {detail}'})
+        result['text'] += ' Amounts below are first-month allocations, not money already saved.'
         result['actions'] = [{'label': 'Where could I save more?', 'action': 'savings'}]
         return result
     if action == 'comparison':
