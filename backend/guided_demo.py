@@ -106,6 +106,15 @@ def answer(customer, goals, action, percent=10, month=None, category=None):
             result['rows'].append({'label': item['category'].capitalize(), 'value': item['potential_reduction_eur'],
                                    'detail': f"EUR {item['baseline_spending_eur']:.2f} recorded → "
                                              f"EUR {item['hypothetical_spending_eur']:.2f} after the hypothetical cut."})
+        result['savings_projection'] = {
+            'percent': percent,
+            'series': [{'key': f'category_{i}', 'label': item['category'].capitalize()}
+                       for i, item in enumerate(candidates)],
+            'points': [{'month': m, **{f'category_{i}': float(money(item['potential_reduction_eur']) * m)
+                                      for i, item in enumerate(candidates)}} for m in range(7)],
+            'note': 'Hypothetical cumulative savings if this recorded month and the same cut repeat for six months. '
+                    'No growth or interest assumed. These categories can include necessary spending.',
+        }
         selected_month = data['source_period']['start'][:7]
         result['actions'] = [{'label': f'Try {p}% less on {top["category"]}', 'action': 'savings',
                               'percent': p, 'month': selected_month, 'category': top['category']} for p in (10, 20) if p != percent]

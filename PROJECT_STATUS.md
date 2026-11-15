@@ -238,3 +238,5 @@ Copy-ready task prompt:
 - Home estimate now warns yellow at 90–100% of the automatic spending target, red above it, with overage and recorded-month dates. Python comparison; automatic allowance unchanged. Threshold tests/build passed.
 
 - Render deployment prepared: Docker frontend/backend, private 31,448-byte two-customer bundle; parity and static API checks passed. Not deployed. Docker build awaits Render verification.
+
+- Coach now shows six-month hypothetical category saving lines and first-month goal allocation bars. Python owns savings projection; existing goal allocations reused. Ten tests and build passed; both charts visually verified.

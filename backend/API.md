@@ -230,3 +230,5 @@ settings retain their existing precedence. Optional plan costs do not override a
 Goal-plan also returns projection: seven points (month 0 through 6), each with values keyed by goal ID. Python repeats the monthly goal budget, allocates by priority, caps each target and rolls remaining funds forward. These are hypothetical future contributions, not historical deposits.
 
 Automatic-demo-budget target_comparison compares the latest complete recorded month with the automatic monthly target. Status over means spending exceeds target; near means 90–100% of a positive target. Includes dated period, spending_eur, target_eur and over_eur; null when unavailable. It is not live usage or a comparison with a manual chart override.
+
+Guided-coach savings replies add savings_projection (percent, series, points months 0-6, note). Each value repeats the existing rounded monthly reduction; no interest or actual saved balance. Missing categories have no line.

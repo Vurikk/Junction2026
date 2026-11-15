@@ -1,3 +1,4 @@
+import CoachSavingsChart from './CoachSavingsChart';
 import React, { useEffect, useRef, useState } from 'react';
 import CoachSpendingChart from './CoachSpendingChart';
 
@@ -72,6 +73,10 @@ export default function Coach({ customer, api, money, open = true, initialQuesti
         <small>{item.user ? 'You' : 'Coach'}</small>
         <p>{item.text}</p>
         {item.source_period && <p className="guided-period">Recorded {item.source_period.start} – {item.source_period.end}</p>}
+        {item.savings_projection && <CoachSavingsChart data={item.savings_projection} money={money} />}
+        {['goals', 'goal_timing'].includes(item.action) && item.rows?.length > 0 &&
+          <CoachSpendingChart rows={item.rows} money={money} heading="Your goal plan"
+            title="Projected first-month contributions" valueLabel="Allocated" />}
         {item.action === 'overview'
           ? <CoachSpendingChart rows={item.rows} period={item.source_period} money={money} />
           : item.rows?.map((row, i) => <div className="guided-result" key={i}>

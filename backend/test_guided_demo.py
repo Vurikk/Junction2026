@@ -23,6 +23,19 @@ class GuidedDemoTests(TestCase):
         unavailable = answer(fixture(), [], 'savings', month='2026-10')
         self.assertEqual(unavailable['rows'], [])
 
+    def test_savings_chart_matches_answer_and_preserves_selected_scenario(self):
+        for percent in [10, 20]:
+            result = answer(fixture(), [], 'savings', percent=percent)
+            chart = result['savings_projection']
+            self.assertEqual(chart['percent'], percent)
+            self.assertEqual(len(chart['points']), 7)
+            for series, row in zip(chart['series'], result['rows']):
+                self.assertEqual(chart['points'][0][series['key']], 0)
+                self.assertEqual(chart['points'][1][series['key']], row['value'])
+                self.assertEqual(Decimal(str(chart['points'][6][series['key']])), Decimal(str(row['value'])) * 6)
+            self.assertIn('Hypothetical', chart['note'])
+        self.assertNotIn('savings_projection', answer(fixture(), [], 'savings', month='2026-10'))
+
     def test_goals_are_conditional_and_never_claim_saved_progress(self):
         goal = Goal(id='one', customer_id='CUST04457', name='Guitar', amount_eur=Decimal('1000'), priority='critical')
         result = answer(customer(), [goal], 'goals')
