@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import CoachSpendingChart from './CoachSpendingChart';
 
 const questions = [
   { action: 'savings', label: 'What could I save most on?', icon: '↘' },
@@ -14,13 +15,14 @@ export default function Coach({ customer, api, money, open = true }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(null);
+  const [showQuestions, setShowQuestions] = useState(true);
   const pending = useRef(null);
   const log = useRef(null);
   const profile = useRef(customer);
   useEffect(() => {
     profile.current = customer;
     pending.current?.abort(); pending.current = null;
-    setMessages([]); setError(''); setRetry(null); setBusy(false);
+    setMessages([]); setError(''); setRetry(null); setBusy(false); setShowQuestions(true);
     return () => pending.current?.abort();
   }, [customer]);
   useEffect(() => {
@@ -40,7 +42,10 @@ export default function Coach({ customer, api, money, open = true }) {
         body: JSON.stringify({ action, ...(percent ? { percent } : {}), ...(month ? { month } : {}),
           ...(category ? { category } : {}) }),
       });
-      if (!controller.signal.aborted && profile.current === requestedProfile) setMessages(old => [...old, result]);
+      if (!controller.signal.aborted && profile.current === requestedProfile) {
+        setMessages(old => [...old, { ...result, action }]);
+        setShowQuestions(false);
+      }
     } catch {
       if (!controller.signal.aborted && profile.current === requestedProfile) {
         setError('Could not load that calculation. Please try again.'); setRetry(choice);
@@ -60,7 +65,9 @@ export default function Coach({ customer, api, money, open = true }) {
         <small>{item.user ? 'You' : 'Coach'}</small>
         <p>{item.text}</p>
         {item.source_period && <p className="guided-period">Recorded {item.source_period.start} – {item.source_period.end}</p>}
-        {item.rows?.map((row, i) => <div className="guided-result" key={i}>
+        {item.action === 'overview'
+          ? <CoachSpendingChart rows={item.rows} period={item.source_period} money={money} />
+          : item.rows?.map((row, i) => <div className="guided-result" key={i}>
           <div className="row"><span>{row.label}</span><strong>{money(row.value)}</strong></div>
           {row.detail && <p className="fine">{row.detail}</p>}
         </div>)}
@@ -74,10 +81,13 @@ export default function Coach({ customer, api, money, open = true }) {
       {error && <div role="alert" className="error"><p>{error}</p>
         <button disabled={busy} onClick={() => ask(retry, true)}>Try again</button></div>}
     </div>
-    <div className="guided-questions" aria-label="Choose a question">
+    {showQuestions && <div className="guided-questions" aria-label="Choose a question">
       {questions.map(choice => <button key={choice.action} disabled={busy} onClick={() => ask(choice)}>
         <span aria-hidden="true">{choice.icon}</span>{choice.label}</button>)}
-    </div>
+    </div>}
+    {messages.length > 0 && <button className="guided-more" disabled={busy}
+      onClick={() => setShowQuestions(value => !value)} aria-expanded={showQuestions}>
+      {showQuestions ? 'Hide questions' : 'Ask another question'}</button>}
     <p className="guided-footer">Preset questions. Real recorded figures. Nothing is saved or changed.</p>
   </section>;
 }

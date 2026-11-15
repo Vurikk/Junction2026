@@ -215,6 +215,14 @@ footer { color: #606b63; }
 .conversation-welcome { font-size: 17px; color: #244c36; margin: 12px 0; }
 .starting-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .guided-badge { color: #38664c; font-size: 11px; padding: 2px 0 9px; }
+.guided-more { flex-shrink: 0; background: #eaf5ed; color: #006c3c; min-height: 44px; margin-top: 8px; }
+.coach-spending-chart { margin: 12px 0; padding: 12px 6px; background: #fff; border-radius: 12px; min-width: 0; }
+.coach-spending-chart figcaption { display: flex; flex-direction: column; gap: 3px; padding: 0 6px 8px; }
+.coach-spending-chart figcaption span, .coach-spending-chart summary { font-size: 12px; color: #526257; }
+.coach-spending-chart table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.coach-spending-chart th { text-align: left; font-weight: normal; }
+.coach-spending-chart td { text-align: right; }
+.coach-spending-chart th, .coach-spending-chart td { padding: 6px; border-bottom: 1px solid #e5eee7; }
 .guided-coach .conversation-log { position: relative; }
 .coach-welcome h3 { margin: 4px 0 8px; font-size: 20px; color: #006c3c; }
 .guided-questions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding-top: 10px;

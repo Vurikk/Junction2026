@@ -16,3 +16,12 @@ Screenshot frontend/qa/scripted-coach.jpg. Latest replies scroll to their beginn
 
 Preview5200->8040 paid-disabled; copied existing app goals/assumptions from8030, original untouched.
 No credentials/ledger/raw dataset copied. Existing data read in place. No push or main merge.
+
+## Monthly category chart
+
+Overview replies now render a horizontal category chart from the existing Python rows: top five plus remainder,
+exact EUR labels and recorded month. Other replies keep their existing result format. No financial arithmetic or
+LLM path added. Accessible chart description and expandable amount table included; unknown/empty rows remain explicit.
+Question menu collapses after each successful answer so the chart fits the mobile popup, with Ask another question to reopen.
+Production build/diff checks passed. Actual browser verified August2026 total1974.07 and six bars with exact values,
+and question-menu open/close. Screenshot frontend/qa/coach-monthly-categories.jpg. Preview remains5200, no backend restart.
