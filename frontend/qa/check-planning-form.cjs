@@ -22,6 +22,11 @@ for (const value of ['500.00', '1200.00', '50.00', '999.00']) assert.ok(!html.in
 assert.match(html, /type="range" min="1" max="12" step="1" value="3"/);
 assert.match(html, /suggested target, not money already held/);
 assert.match(html, /Recorded daily average/);
+assert.match(html, /class="money-input"/);
+assert.match(html, /Income left for other savings/);
+assert.match(html, /not chosen/);
+assert.match(html, /not a safe-to-spend amount/);
+assert.doesNotMatch(html, /Latest recorded balance \(read-only\)/);
 assert.match(html, /Exclude food already in the bills and food total/);
 assert.match(html, /disabled="">Confirm and calculate/);
 assert.match(html, /historical draft/);

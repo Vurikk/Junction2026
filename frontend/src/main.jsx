@@ -10,8 +10,8 @@ import PlanningForm from './PlanningForm.jsx';
 import { chartPeriods } from './chartPeriods';
 
 const money = value => value == null ? 'Not available' : new Intl.NumberFormat('en-FI', {
-  style: 'currency', currency: 'EUR', maximumFractionDigits: 2,
-}).format(Number(value));
+  minimumFractionDigits: 2, maximumFractionDigits: 2,
+}).format(Number(value)) + '\u00a0€';
 async function api(path, options = {}) {
   const response = await fetch(`/api/${path}`, options);
   if (!response.ok) {

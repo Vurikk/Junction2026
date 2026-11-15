@@ -213,6 +213,9 @@ footer { color: #606b63; }
 .demo-questions summary { cursor: pointer; font-size: 13px; font-weight: 600; }
 .demo-questions .starting-actions { margin: 8px 0 4px; }
 .demo-questions .fine { margin: 4px 0; }
+.money-input { position: relative; }
+.money-input input { padding-right: 46px; }
+.money-input > span { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); pointer-events: none; }
 .guided-label { display: block; font-size: 11px; color: #5f7266; margin-bottom: 8px; }
 .guided-turn { overflow-wrap: anywhere; }
 .guided-turn h3 { text-transform: capitalize; }

@@ -27,6 +27,26 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
   const [review, setReview] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const edited = useRef(new Set());
+  const [remainder, setRemainder] = useState(null);
+  const remainderBody = JSON.stringify(Object.fromEntries([
+    'confirmed_income_eur', 'upcoming_essential_bills_eur', 'everyday_spending_eur', 'voluntary_goal_contribution_eur',
+  ].map(key => [key, values[key] === '' ? null : String(values[key])])));
+  useEffect(() => {
+    const controller = new AbortController();
+    setRemainder(null);
+    const timer = setTimeout(() => {
+      api(`customers/${customer}/planning-remainder`, {
+        method: 'POST', credentials: 'same-origin', signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' }, body: remainderBody,
+      }).then(result => {
+        if (!controller.signal.aborted) setRemainder({ body: remainderBody, result });
+      }).catch(() => {
+        if (!controller.signal.aborted) setRemainder({ body: remainderBody, error: true });
+      });
+    }, 300);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [api, customer, remainderBody]);
+  const currentRemainder = remainder?.body === remainderBody ? remainder : null;
   useEffect(() => {
     const controller = new AbortController();
     setDefaults(null); setError(''); setLoading(true); setConfirmed(false);
@@ -83,9 +103,20 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
           <span>{item.label}</span><b>{money(item.amount_eur)}</b></div>)}
         <p className="fine">{defaults.bills.note}</p>
       </div>}
-      <input id={key} name={key} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
+      <div className="money-input"><input id={key} name={key} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
         onWheel={event => event.currentTarget.blur()} value={values[key]} placeholder="Unknown"
-        onChange={event => edit(key, event.target.value)} />
+        onChange={event => edit(key, event.target.value)} /><span aria-hidden="true">€</span></div>
+      {key === 'voluntary_goal_contribution_eur' && <div className="fine" aria-live="polite">
+        <p>Income {money(values.confirmed_income_eur === '' ? null : values.confirmed_income_eur)}
+          {' − bills '}{money(values.upcoming_essential_bills_eur === '' ? null : values.upcoming_essential_bills_eur)}
+          {' − other daily costs '}{money(values.everyday_spending_eur === '' ? null : values.everyday_spending_eur)}
+          {' − goal contribution '}{values.voluntary_goal_contribution_eur === '' ? 'not chosen' : money(values.voluntary_goal_contribution_eur)}</p>
+        <p>Income left for other savings or to leave unallocated: <b>{money(currentRemainder?.result?.remaining_income_eur)}</b></p>
+        {!currentRemainder && <p>Updating preview…</p>}
+        {currentRemainder?.error && <p>Remainder preview is unavailable. Review the entered amounts.</p>}
+        {currentRemainder?.result && <p>{currentRemainder.result.note}</p>}
+        <p>This excludes your existing balance and protected reserve. It is not a safe-to-spend amount.</p>
+      </div>}
     </React.Fragment>;
   }
   return <details className="planning" id="spending-plan"><summary>Optional spending plan</summary><section>
@@ -117,7 +148,7 @@ export default function PlanningForm({ customer, assumptions, api, money, busy, 
       <p>Your plan covers {days || 'an unknown number of'} days.</p>
       {review && <p role="status">Plan length changed. Automatic estimates reload; your current edits remain.
         Review every retained amount for the new period.</p>}
-      <label>Latest recorded balance (read-only)</label><p><strong>{money(balance?.amount_eur)}</strong></p>
+      <label>Latest recorded balance</label><p><strong>{money(balance?.amount_eur)}</strong></p>
       {balance?.recorded_at && <p>Recorded on {readableDate(balance.recorded_at)}</p>}
       <p className="fine">{balance?.note}</p>
       {loading && <p role="status">Loading historical defaults…</p>}
