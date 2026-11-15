@@ -1,3 +1,4 @@
+import SpendingTooltip from './SpendingTooltip';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
@@ -63,11 +64,11 @@ function App() {
     const controller = new AbortController();
     setData({}); setError('');
     const resources = ['spending', 'spending-history', 'budget', 'goals', 'assumptions', 'mortgages',
-      'recorded-balances', 'spending-comparison', 'planning-suggestions', 'planning-state'];
+      'recorded-balances', 'spending-comparison', 'planning-suggestions', 'planning-state', 'income'];
     resources.forEach(resource => {
       const query = ['spending-history', 'spending-comparison'].includes(resource) ? `?period=${period.toLowerCase()}` : '';
       api(`customers/${customer}/${resource}${query}`, { signal: controller.signal })
-        .then(result => setData(old => ({ ...old, [resource]: result })))
+        .then(result => { if (!controller.signal.aborted) setData(old => ({ ...old, [resource]: result })); })
         .catch(e => { if (e.name !== 'AbortError') setError(e.message); });
     });
     return () => controller.abort();
@@ -148,7 +149,7 @@ function App() {
             <ResponsiveContainer width="100%" height={230}><BarChart data={chartPeriods(history)}
               margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
               <XAxis dataKey="start" tickLine={false} axisLine={false} />
-              <YAxis tickLine={false} axisLine={false} padding={{ top: 18, bottom: 8 }} /><Tooltip formatter={value => money(value)} />
+              <YAxis tickLine={false} axisLine={false} padding={{ top: 18, bottom: 8 }} /><Tooltip content={<SpendingTooltip period={history.period} income={data.income} money={money} />} />
               <Bar dataKey="spending_eur" name="Spent" fill="#008c45" radius={[5, 5, 0, 0]} />
               {history.historical_average_eur != null && <ReferenceLine y={history.historical_average_eur}
                 stroke="#94662e" strokeDasharray="5 5" ifOverflow="extendDomain"

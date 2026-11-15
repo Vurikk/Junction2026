@@ -305,3 +305,7 @@ footer { color: #606b63; }
 .spending-target-warning { margin-bottom: 16px; }
 .spending-target-warning > strong { display: block; font-size: 20px; }
 .spending-target-warning p { margin: 6px 0; }
+
+.spending-tooltip { background: white; border: 1px solid #d6ddd8; border-radius: 10px; padding: 10px 12px;
+  box-shadow: 0 3px 12px #00000012; max-width: min(300px, calc(100vw - 32px)); }
+.spending-tooltip p { margin: 3px 0; }
