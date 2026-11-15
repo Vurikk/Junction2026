@@ -16,6 +16,17 @@ def goal(name, amount, priority='flexible'):
 
 
 class GoalPlanTests(TestCase):
+    def test_projection_caps_goals_and_rolls_unused_budget_forward(self):
+        result = goal_plan(customer(), [goal('later', 100, 'flexible'), goal('first', 200, 'critical')])
+        points = result['projection']
+        self.assertEqual(len(points), 7)
+        self.assertEqual(points[0]['values'], {'first': 0, 'later': 0})
+        self.assertEqual(points[1]['values'], {'first': 150, 'later': 0})
+        self.assertEqual(points[2]['values'], {'first': 200, 'later': 100})
+        self.assertEqual(points[6]['values'], {'first': 200, 'later': 100})
+        for point in points:
+            self.assertLessEqual(sum(point['values'].values()), point['month'] * result['goal_budget_eur'])
+
     def test_capacity_without_goal_preserves_home_contract(self):
         profile = customer()
         self.assertEqual(automatic_budget(profile, [])['status'], 'needs_goal')

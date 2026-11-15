@@ -10,7 +10,7 @@ PRIORITY_LABELS = {'critical': 'Urgent', 'important': 'Important', 'flexible': '
 
 def goal_plan(customer, goals, as_of=None):
     budget = automatic_budget(customer, goals, as_of, require_goal=False)
-    result = {**budget, 'goals': [], 'monthly_savings_capacity_eur': None,
+    result = {**budget, 'goals': [], 'monthly_savings_capacity_eur': None, 'projection': [],
               'additional_savings_if_redirect_extra_eur': budget['monthly_extra_eur'],
               'timing_basis': ('Conditional estimate: the historical monthly saving budget repeats, paid at the end of each '
                                'typical month. Once a goal is funded, its allocation moves to the next goal. '
@@ -44,6 +44,17 @@ def goal_plan(customer, goals, as_of=None):
                                 'monthly_allocation_eur': allocation[goal.id], 'completion_months': months,
                                 'completion_weeks': weeks, 'save_all_extra_months': fast_months,
                                 'save_all_extra_weeks': fast_weeks})
+    # Hypothetical future months, never historical deposits or existing savings.
+    totals = {item['goal_id']: Decimal(0) for item in result['goals']}
+    result['projection'] = [{'month': 0, 'values': {key: 0.0 for key in totals}}]
+    for month in range(1, 7):
+        remaining = pool
+        for item in result['goals']:
+            key = item['goal_id']
+            contribution = min(remaining, money(item['target_eur']) - totals[key])
+            totals[key] += contribution
+            remaining -= contribution
+        result['projection'].append({'month': month, 'values': {key: float(value) for key, value in totals.items()}})
     return result
 
 

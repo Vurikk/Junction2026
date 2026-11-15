@@ -32,3 +32,6 @@ dist/
 .coach_llm/
 *.sqlite3
 *.sqlite3-*
+
+# Private Render demo bundle
+*.b64

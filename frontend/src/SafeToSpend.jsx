@@ -32,7 +32,16 @@ function SpendingEstimate({ customer, api, money, refreshKey, onAddGoal }) {
     return () => controller.abort();
   }, [api, customer, refreshKey, retry]);
   if (estimate?.status === 'needs_goal') return <GoalPrompt onAddGoal={onAddGoal} />;
-  return <section className="allowance-summary"><div className="allowance-heading"><h2>Extra spending estimate</h2>
+  const comparison = estimate?.target_comparison;
+  const warning = !busy && !error && ['over', 'near'].includes(comparison?.status) ? comparison.status : null;
+  return <section className={`allowance-summary${warning ? ` allowance-${warning}` : ''}`}>
+    {warning && <div className="spending-target-warning" role="status">
+      <strong>{warning === 'over' ? 'Over your spending target' : 'Close to your spending target'}</strong>
+      <p>{warning === 'over' ? `${money(comparison.over_eur)} above the automatic plan target.`
+        : 'Recorded spending has reached at least 90% of the automatic plan target.'}</p>
+      <p className="fine">{comparison.period.start}?{comparison.period.end} ? Recorded month, not live spending.</p>
+    </div>}
+    <div className="allowance-heading"><h2>Extra spending estimate</h2>
     <div className="allowance-toggle">{['Day', 'Week'].map(value => <button key={value}
       aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}</div></div>
     <strong className="allowance-amount">{busy ? 'Checking…' : money(error || estimate?.status !== 'estimated' ? null

@@ -5,7 +5,9 @@ import './style.css';
 import Coach from './Coach';
 import CoachDialog from './CoachDialog';
 import Icon from './Icon';
-import HomeSummary, { ChartTargetContext, PlanningContext } from './HomeSummary';
+import HomeSummary, { ChartTargetContext } from './HomeSummary';
+import PlanningForm from './PlanningForm';
+import GoalContributions from './GoalContributions';
 import { chartPeriods } from './chartPeriods';
 
 const money = value => value == null ? 'Not available' : new Intl.NumberFormat('en-FI', {
@@ -21,53 +23,6 @@ async function api(path, options = {}) {
   return response.json();
 }
 
-const planningFields = [
-  ['available_funds_eur', 'Accessible funds now'],
-  ['confirmed_income_eur', 'Additional confirmed income during the plan'],
-  ['upcoming_essential_bills_eur', 'Upcoming essential bills and debt payments'],
-  ['emergency_reserve_eur', 'Emergency reserve to protect'],
-  ['everyday_spending_eur', 'Planned everyday costs, excluding bills above'],
-  ['voluntary_goal_contribution_eur', 'Maximum voluntary goal contribution'],
-  ['weekly_budget_eur', 'Weekly chart target (optional)'],
-  ['monthly_budget_eur', 'Monthly chart target (optional)'],
-];
-
-function PlanningForm({ assumptions, suggestions, busy, onSave }) {
-  return <details className="planning" id="spending-plan"><summary>Optional spending plan</summary><section><h2>Confirm your spending plan</h2>
-    <p>All amounts cover the same planning period. Enter zero where appropriate; blank means unknown.
-      Do not include income already held in accessible funds. Confirm you can pay bills before everyday spending starts.</p>
-    <PlanningContext suggestions={suggestions} money={money} />
-    <form onSubmit={event => {
-      event.preventDefault();
-      const values = new FormData(event.currentTarget);
-      const payload = Object.fromEntries(planningFields.map(([key]) => [key, values.get(key) || null]));
-      payload.horizon_days = Number(values.get('horizon_days'));
-      payload.repeat_plan = values.get('repeat_plan') === 'on';
-      onSave(payload);
-    }}>
-      <details className="advanced"><summary>Advanced: period, repeating plan and chart targets</summary>
-      <label htmlFor="horizon_days">Planning period (days)</label>
-      <input id="horizon_days" name="horizon_days" type="number" min="1" max="366" step="1"
-        defaultValue={assumptions.horizon_days} required />
-      {planningFields.slice(6).map(([key, label]) => <React.Fragment key={key}>
-        <label htmlFor={key}>{label} (€)</label>
-        <input id={key} name={key} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
-          defaultValue={assumptions[key] ?? ''} placeholder="Unknown" />
-      </React.Fragment>)}
-      <label className="check"><input name="repeat_plan" type="checkbox" defaultChecked={assumptions.repeat_plan} />
-        I confirm the same savings capacity will be available in each future planning period.</label></details>
-      <p>Your plan covers {assumptions.horizon_days} days unless changed above. Blank amounts stay unknown.</p>
-      {planningFields.slice(0, 6).map(([key, label]) => <React.Fragment key={key}>
-        <label htmlFor={key}>{label} (EUR)</label>
-        <input id={key} name={key} type="number" inputMode="decimal" min="0" max="9999999999.99" step="0.01"
-          defaultValue={assumptions[key] ?? ''} placeholder="I don't know" />
-      </React.Fragment>)}
-      <label className="check"><input type="checkbox" required />
-        I confirm these inputs and that essential bills can be paid before spending.</label>
-      <button className="primary" disabled={busy}>Confirm and calculate</button>
-    </form></section></details>;
-}
-
 function App() {
   const [customers, setCustomers] = useState([]);
   const [customer, setCustomer] = useState('');
@@ -78,7 +33,6 @@ function App() {
   const [period, setPeriod] = useState('Month');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [analysis, setAnalysis] = useState(null);
   const [reload, setReload] = useState(0);
   const [coachQuestion, setCoachQuestion] = useState('');
   const [coachOpen, setCoachOpen] = useState(false);
@@ -90,13 +44,13 @@ function App() {
     if (page === 'Goals' && focusGoal) { document.getElementById('name')?.focus(); setFocusGoal(false); }
   }, [page, focusGoal]);
   useEffect(() => {
-    if (page !== 'Home' || !targetField || !data.assumptions) return;
+    if (page !== 'Home' || !targetField || !data.assumptions || !data['planning-state']) return;
     const plan = document.getElementById('spending-plan');
     plan.open = true;
     plan.querySelector('.advanced').open = true;
     document.getElementById(targetField)?.focus();
     setTargetField('');
-  }, [page, targetField, data.assumptions]);
+  }, [page, targetField, data.assumptions, data['planning-state']]);
   useEffect(() => {
     const controller = new AbortController();
     api('customers', { signal: controller.signal }).then(items => {
@@ -107,9 +61,9 @@ function App() {
   useEffect(() => {
     if (!customer) return;
     const controller = new AbortController();
-    setData({}); setError(''); setAnalysis(null);
+    setData({}); setError('');
     const resources = ['spending', 'spending-history', 'budget', 'goals', 'assumptions', 'mortgages',
-      'recorded-balances', 'spending-comparison', 'planning-suggestions'];
+      'recorded-balances', 'spending-comparison', 'planning-suggestions', 'planning-state'];
     resources.forEach(resource => {
       const query = ['spending-history', 'spending-comparison'].includes(resource) ? `?period=${period.toLowerCase()}` : '';
       api(`customers/${customer}/${resource}${query}`, { signal: controller.signal })
@@ -128,7 +82,7 @@ function App() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: fields.get('name').trim(), amount_eur: fields.get('amount'), priority: fields.get('priority') }),
       });
-      setData({}); setAnalysis(null); form.reset(); setReload(value => value + 1);
+      setData({}); form.reset(); setReload(value => value + 1);
       setGoalNotice('Goal saved.');
       try {
         const result = await api(`customers/${customer}/goal-analysis`);
@@ -138,18 +92,13 @@ function App() {
       }
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
-  async function analyze() {
-    setBusy(true); setError('');
-    try { setAnalysis(await api(`customers/${customer}/goal-analysis`)); }
-    catch (e) { setError(e.message); } finally { setBusy(false); }
-  }
   async function savePlan(payload) {
     setBusy(true); setError('');
     try {
       await api(`customers/${customer}/assumptions`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       });
-      setData({}); setAnalysis(null); setGoalNotice(''); setReload(value => value + 1);
+      setData({}); setGoalNotice(''); setReload(value => value + 1);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   function openCoach(question = '') { setCoachQuestion(question); setCoachOpen(true); }
@@ -160,14 +109,11 @@ function App() {
   const history = data['spending-history'];
   const points = history?.periods;
   return <div className="app">
-    <header><button className="brand" onClick={() => setPage('Home')}>Financial coach</button>
-      <button className="header-chat" aria-label="Open Coach" onClick={() => openCoach()}><Icon name="Coach" /></button>
-    </header><div className="concept">Junction 2026 concept / Not an official banking app</div>
     <main>
       <div className="customer"><label htmlFor="customer">Your demo profile</label>
         <select id="customer" value={customer} disabled={busy || !customers.length} onChange={e => {
           setCoachOpen(false); setCoachQuestion('');
-          setData({}); setAnalysis(null); setGoalNotice(''); setCustomer(e.target.value);
+          setData({}); setGoalNotice(''); setCustomer(e.target.value);
         }}><option value="" disabled>Select customer</option>
           {customers.map(item => <option key={item.customer_id}>{item.customer_id}</option>)}</select></div>
       {page !== 'Home' && <div className="heading"><h1>{{ Home: 'Your money, made clearer',
@@ -183,8 +129,9 @@ function App() {
             const plan = document.getElementById('spending-plan');
             if (plan) { plan.open = true; plan.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
           }} />
-        {data.assumptions && <PlanningForm key={`${customer}-${reload}`} assumptions={data.assumptions}
-          suggestions={data['planning-suggestions']} busy={busy} onSave={savePlan} />}
+        {data.assumptions && data['planning-state'] && <PlanningForm key={`${customer}-${reload}`}
+          assumptions={data.assumptions} customer={customer} api={api} money={money}
+          hasSavedPlan={data['planning-state'].has_saved_plan} busy={busy} onSave={savePlan} />}
         <details className="supporting"><summary>Account and mortgage information</summary><section>
           <p>Recorded balances are historical snapshots, not current available funds.</p><h2>Mortgage information</h2>
           <p>{data.mortgages ? (data.mortgages.applications.length
@@ -236,6 +183,7 @@ function App() {
           <p className="fine">{history?.note} Basket classifications are uncertain; everyday categories can contain essentials.</p></section>
       </>}
       {page === 'Goals' && <>
+        <GoalContributions customer={customer} api={api} money={money} goals={data.goals} />
         {goalNotice && <section role="status">{goalNotice}</section>}
         <section><div className="section-title"><h2>Your goals</h2><span className="tag">One step at a time</span></div>
           {!data.goals && <p role="status">{error ? 'Goals unavailable.' : 'Loading goals…'}</p>}
@@ -243,17 +191,8 @@ function App() {
           <p>Add your first goal below.</p></div>}
           {data.goals?.map(goal => <article className="goal" key={goal.id}><span className={`tag ${goal.priority}`}>{goal.priority}</span>
             <h3>{goal.name}</h3><strong>{money(goal.amount_eur)}</strong><p>Saved amount and progress not available</p></article>)}
-          <button className="primary" onClick={analyze} disabled={busy || !data.goals?.length}>{busy ? 'Please wait…' : 'Analyze my goals'}</button>
-          {analysis && <div className="analysis" role="status"><h3>Can I reach my goals?</h3>
-          <p>{analysis.explanation}</p>
-            <dl><dt>Total goal amount</dt><dd>{money(analysis.total_target_eur)}</dd>
-              <dt>Savings capacity per planning period</dt><dd>{money(analysis.savings_capacity_eur)}</dd></dl>
-            {analysis.allocations.map(item => <div key={item.goal_id}>
-              <h3>{data.goals?.find(goal => goal.id === item.goal_id)?.name}</h3>
-              <p>Allocated: {money(item.allocated_eur)} · {item.feasibility.replaceAll('_', ' ')}</p>
-              <p>Completion: {item.completion_periods == null ? 'Not available'
-                : `${item.completion_periods} planning periods of ${analysis.assumptions.horizon_days} days`}</p>
-            </div>)}</div>}</section>
+          <button className="primary" onClick={() => openCoach('Analyze my goals')} disabled={busy || !data.goals?.length}>{busy ? 'Please wait…' : 'Analyze my goals'}</button>
+          </section>
         <section><h2>A new goal</h2>
           <p>Big or small, give your plan a place to start.</p><form onSubmit={createGoal}>
           <label htmlFor="name">Goal name</label><input id="name" name="name" placeholder="e.g. A rainy-day fund" required maxLength={100}
@@ -276,7 +215,7 @@ function App() {
             .then(result => {
               if (activeCustomer.current === customer) setData(old => ({ ...old, [resource]: result }));
             }).catch(e => { if (activeCustomer.current === customer) setError(e.message); }));
-          setAnalysis(null); setGoalNotice('');
+          setGoalNotice('');
         }} /></CoachDialog>}
       <footer>S-Bank inspired · Junction 2026<br />Historical synthetic demo data</footer>
     </main>

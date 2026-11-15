@@ -211,3 +211,22 @@ Existing confirmed manual plans, cash-only draft endpoint, goals and Coach runti
 Chart integration: spending-history now falls back to the automatic TOTAL historical spending benchmark when the
 matching-period manual target is null. Explicit manual0 wins. Additive target_source (manual|automatic_historical|null),
 target_source_period, target_basis and target_limitations describe provenance. Exact weekly formula and tests in handoff.
+
+
+## Optional spending plan integration
+
+- GET `/api/customers/{id}/planning-defaults?horizon_days=30`: historical editable suggestions;
+  never confirms assumptions or changes goals. Horizon 1?366 days.
+- POST `/api/customers/{id}/planning-remainder`: income minus bills, everyday costs and optional
+  voluntary contribution; accepts `horizon_days`. This preview is not the automatic home allowance.
+- GET `/api/customers/{id}/planning-state`: `has_saved_plan` indicates an explicitly saved assumptions payload.
+- PUT `/assumptions` retains its existing contract. Optional backend environment variable
+  `SBANK_PLAN_STATE_PATH` enables SQLite persistence across restarts. Without it, plans remain in memory.
+  Keep the SQLite file outside version control; goals are still session-only.
+
+Automatic allowance, goal-plan and historical chart fallback remain unchanged. Explicit chart target
+settings retain their existing precedence. Optional plan costs do not override automatic calculations.
+
+Goal-plan also returns projection: seven points (month 0 through 6), each with values keyed by goal ID. Python repeats the monthly goal budget, allocates by priority, caps each target and rolls remaining funds forward. These are hypothetical future contributions, not historical deposits.
+
+Automatic-demo-budget target_comparison compares the latest complete recorded month with the automatic monthly target. Status over means spending exceeds target; near means 90–100% of a positive target. Includes dated period, spending_eur, target_eur and over_eur; null when unavailable. It is not live usage or a comparison with a manual chart override.

@@ -294,3 +294,14 @@ footer { color: #606b63; }
 @media (prefers-reduced-motion: reduce) { .coach-dialog { transition: none; } .coach-dialog[open] { animation: none; } }
 .coach-dialog { bottom: max(72px, calc(100dvh - var(--coach-height, 100dvh) - var(--coach-top, 0px) + 72px)); }
 @media (max-height: 500px) { .coach-dialog { bottom: 0; } }
+
+/* Historical target warnings use text as well as color. */
+.coach-allowance-group .allowance-summary.allowance-over,
+.coach-allowance-group .allowance-summary.allowance-near { padding: 14px; border-radius: 12px; border: 2px solid; }
+.coach-allowance-group .allowance-summary.allowance-over { background: #fff0ed; border-color: #b42318; }
+.coach-allowance-group .allowance-summary.allowance-near { background: #fff6d9; border-color: #a96800; }
+.allowance-over .allowance-amount, .allowance-over .spending-target-warning > strong { color: #a32118; }
+.allowance-near .allowance-amount, .allowance-near .spending-target-warning > strong { color: #805000; }
+.spending-target-warning { margin-bottom: 16px; }
+.spending-target-warning > strong { display: block; font-size: 20px; }
+.spending-target-warning p { margin: 6px 0; }

@@ -1,0 +1,16 @@
+**/.git
+**/.env*
+**/node_modules
+**/dist
+**/__pycache__
+**/.venv
+**/Data
+**/data
+**/*.csv
+**/*.txt
+!backend/requirements.txt
+**/*.b64
+**/*.sqlite3*
+**/*.log
+frontend/qa
+.coach_llm

@@ -10,7 +10,7 @@ const questions = [
   { action: 'tips', label: 'Everyday saving tips', icon: '✦' },
 ];
 
-export default function Coach({ customer, api, money, open = true }) {
+export default function Coach({ customer, api, money, open = true, initialQuestion = '' }) {
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -28,6 +28,13 @@ export default function Coach({ customer, api, money, open = true }) {
   useEffect(() => {
     if (open && log.current) log.current.scrollTop = log.current.lastElementChild?.offsetTop || 0;
   }, [messages, busy, error, open]);
+
+  useEffect(() => {
+    if (!open || !initialQuestion) return;
+    const choice = questions.find(item => item.label === initialQuestion)
+      || (initialQuestion === 'Spending by category' ? questions.find(item => item.action === 'overview') : null);
+    if (choice) ask(choice);
+  }, [open, initialQuestion, customer]);
 
   async function ask(choice, replay = false) {
     if (pending.current) return;

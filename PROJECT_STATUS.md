@@ -224,3 +224,17 @@ Copy-ready task prompt:
   then approve the smallest user review flow. Do not build the previous six-field wizard first.
 - Decide on a small real LLM layer after the data audit and one deterministic what-if contract; do not build a general agent.
 - Defer richer mortgage features, open-data benchmarks, multi-bank support, goal editing and persistence until the core demo is clear.
+
+
+### Selective optional-plan integration ? 15 November
+- Integrated historical form defaults and optional saved-plan storage from backend `991f124` and UI `f811777`.
+- Kept automatic goal-based allowance, automatic chart fallback, eight-week history and scripted Coach.
+- Corrected remainder preview to send the selected plan horizon; guarded chart-settings focus until the form loads.
+- Plan persistence across backend restarts requires `SBANK_PLAN_STATE_PATH`; goals remain session-only.
+- Integration is in `codex/scripted-coach`; other UI worktrees and running backend processes are untouched.
+
+- Added Goals six-month projection chart using Python goal-plan allocations, target caps and priority rollover. Preview 5204 refreshed with existing goal restored. Verified 18 tests passed (one dataset check skipped), production build and rendered graph.
+
+- Home estimate now warns yellow at 90–100% of the automatic spending target, red above it, with overage and recorded-month dates. Python comparison; automatic allowance unchanged. Threshold tests/build passed.
+
+- Render deployment prepared: Docker frontend/backend, private 31,448-byte two-customer bundle; parity and static API checks passed. Not deployed. Docker build awaits Render verification.

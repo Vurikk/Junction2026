@@ -33,6 +33,21 @@ def customer(income=1000, spend=600, customer_id="CUST04457"):
 
 
 class AutomaticTests(TestCase):
+    def test_target_warning_uses_latest_complete_month_and_thresholds(self):
+        sample = customer()
+        self.assertEqual(automatic_budget(sample, [goal()])['target_comparison']['status'], 'within')
+        rows = sample._transactions
+        latest = (rows.transaction_type == 'purchase') & (rows.tx_amount_eur == -600)
+        index = rows[latest].index[-1]
+        rows.loc[index, 'tx_amount_eur'] = -750
+        self.assertEqual(automatic_budget(sample, [goal()])['target_comparison']['status'], 'near')
+        rows.loc[index, 'tx_amount_eur'] = -1000
+        result = automatic_budget(sample, [goal()])['target_comparison']
+        self.assertEqual(result['status'], 'over')
+        self.assertEqual(result['over_eur'], 183.33)
+        self.assertEqual(result['period'], {'start': '2024-03-01', 'end': '2024-03-31'})
+        self.assertIsNone(automatic_budget(sample, [])['target_comparison'])
+
     def test_oracle_same_months_and_actual_day_denominator(self):
         result = automatic_budget(customer(), [goal()], date(2026, 11, 14))
         self.assertEqual(result['source_period'], {'start': '2024-01-01', 'end': '2024-03-31'})

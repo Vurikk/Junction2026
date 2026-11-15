@@ -32,7 +32,7 @@ def automatic_budget(customer, goals, as_of=None, *, require_goal=True):
         "action": "create_goal" if not goals and require_goal else None, "mode": "historical_demo", "as_of": str(checked),
         "source_period": {"start": str(windows[0].start_time.date()), "end": str(windows[-1].end_time.date())} if windows else None,
         "period_count": len(windows), "covered_days": covered_days, "confidence": "low",
-        "daily_eur": None, "weekly_eur": None, "monthly_extra_eur": None, "income_eur": None,
+        "target_comparison": None, "daily_eur": None, "weekly_eur": None, "monthly_extra_eur": None, "income_eur": None,
         "protected_spending_eur": None, "surplus_eur": None, "deficit_eur": None, "reserve_target_eur": None,
         "reserve_contribution_eur": None, "reserve_shortfall_eur": None, "goal_budget_eur": None,
         "goal_allocated_eur": None, "goal_allocations": [], "missing_inputs": missing,
@@ -72,6 +72,16 @@ def automatic_budget(customer, goals, as_of=None, *, require_goal=True):
                   deficit_eur=float(max(Decimal(0), baseline - income)), reserve_target_eur=float(reserve_target),
                   reserve_contribution_eur=float(reserve), reserve_shortfall_eur=float(reserve_target - reserve),
                   goal_budget_eur=float(goal_budget), goal_allocated_eur=float(allocated))
+    target = baseline + extra
+    latest = windows[-1]
+    actual = total_amount(in_window(spending, latest))
+    over = max(Decimal(0), actual - target)
+    status = 'over' if actual > target else 'near' if target > 0 and actual >= target * Decimal('0.90') else 'within'
+    result['target_comparison'] = {
+        'status': status, 'spending_eur': float(actual), 'target_eur': float(target), 'over_eur': float(over),
+        'period': {'start': str(latest.start_time.date()), 'end': str(latest.end_time.date())},
+        'basis': 'Latest complete recorded month versus the automatic historical plan target, not live spending.',
+    }
     return result
 
 
